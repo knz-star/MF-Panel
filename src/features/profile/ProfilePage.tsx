@@ -5,6 +5,7 @@ import { db, doc, updateDoc, getDoc } from '../../lib/supabaseDocumentStore';
 import type { TeamKey } from '../../types/user';
 import { getMyTeamScore, type MyTeamScore } from '../../services/teamAnalyticsService';
 import { notify } from '../../utils/toast';
+import { supabase } from '../../lib/supabase';
 
 const workspaceLabels: Record<TeamKey, string> = {
   searching: 'Searching Team',
@@ -16,6 +17,7 @@ const workspaceLabels: Record<TeamKey, string> = {
 export const ProfilePage: React.FC = () => {
   const { currentUser, userProfile, isAdmin, refreshProfile } = useAuth();
   const [displayName, setDisplayName] = useState(userProfile?.displayName ?? '');
+  const [gender, setGender] = useState<'male' | 'female' | ''>(userProfile?.gender === 'male' || userProfile?.gender === 'female' ? userProfile.gender : '');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
   const [scoreDays, setScoreDays] = useState<7|14>(7);
@@ -24,6 +26,7 @@ export const ProfilePage: React.FC = () => {
   useEffect(() => { let alive=true; const load=async()=>{try{const result=await getMyTeamScore(scoreDays);if(alive){setScoreData(result);setScoreError('');}}catch(e){if(alive)setScoreError(e instanceof Error?e.message:'Score is not available yet.');}};void load();const timer=window.setInterval(()=>void load(),30000);return()=>{alive=false;window.clearInterval(timer);}; },[scoreDays]);
 
   useEffect(() => setDisplayName(userProfile?.displayName ?? ''), [userProfile?.displayName]);
+  useEffect(() => setGender(userProfile?.gender === 'male' || userProfile?.gender === 'female' ? userProfile.gender : ''), [userProfile?.gender]);
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -39,9 +42,13 @@ export const ProfilePage: React.FC = () => {
     setSaving(true);
     setMessage(null);
     try {
+      const updatedAt = new Date().toISOString();
+      // Persist profile preferences to the canonical Supabase profile first.
+      const { error: canonicalError } = await supabase.from('mfp_user_profiles').update({ display_name: cleanName, ...(gender ? { gender, gender_group: gender } : {}), updated_at: updatedAt }).eq('user_id', currentUser.uid);
+      if (canonicalError) throw canonicalError;
       await updateDoc(doc(db, 'users', currentUser.uid), {
-        displayName: cleanName,
-        updatedAt: new Date().toISOString(),
+        displayName: cleanName, ...(gender ? { gender, genderGroup: gender } : {}),
+        updatedAt,
       });
       await refreshProfile();
       setMessage({ kind: 'success', text: 'Your profile has been updated.' }); notify('Profile saved successfully.', 'success');
@@ -82,6 +89,10 @@ export const ProfilePage: React.FC = () => {
           <div>
             <label htmlFor="profile-name" className="mb-1.5 block text-sm font-semibold text-slate-700">Display name</label>
             <input id="profile-name" value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={80} autoComplete="name" className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10" required />
+          </div>
+          <div>
+            <label htmlFor="profile-gender" className="mb-1.5 block text-sm font-semibold text-slate-700">Gender</label>
+            <select id="profile-gender" value={gender} onChange={(event) => setGender(event.target.value as 'male' | 'female' | '')} className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"><option value="">Not specified</option><option value="male">Male</option><option value="female">Female</option></select>
           </div>
           <div>
             <label htmlFor="profile-email" className="mb-1.5 block text-sm font-semibold text-slate-700">Sign-in email</label>
