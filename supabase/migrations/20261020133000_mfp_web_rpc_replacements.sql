@@ -37,7 +37,7 @@ where role in ('USER','SEARCHER','CHECKER')
   and account_status='ACTIVE';
 
 create or replace function public.mfp_web_api(p_service text, p_payload jsonb default '{}'::jsonb)
-returns jsonb language plpgsql security definer set search_path=public,auth,pg_temp as $$
+returns jsonb language plpgsql security definer set search_path=public,extensions,auth,pg_temp as $$
 declare
   uid uuid := auth.uid(); p public.mfp_user_profiles%rowtype; action text := coalesce(p_payload->>'action','');
   admin_ok boolean := false; team_ok boolean := false; v_team text; v jsonb; code text; random_bytes bytea; request_id uuid; exp timestamptz;
@@ -211,7 +211,7 @@ begin
 
   if p_service in ('mfp-admin-export-settings','admin-export-settings') then
     if not admin_ok then raise exception 'Administrator access required'; end if;
-    if action='read' then select setting_value into v from mfp_private.mfp_export_settings where setting_key='website_zip_export' limit 1; return jsonb_build_object('settings',coalesce(v,'{}'::jsonb),'zip_password',v->>'zip_password');
+    if action='read' then select setting_value into v from mfp_private.mfp_export_settings where setting_key='website_zip_export' limit 1; return jsonb_build_object('configured',coalesce(length(v->>'zip_password'),0)>0);
     elsif action='write' then insert into mfp_private.mfp_export_settings(setting_key,setting_value,updated_by,updated_at) values('website_zip_export',jsonb_build_object('zip_password',coalesce(p_payload->>'zip_password','')),uid,now()) on conflict(setting_key) do update set setting_value=excluded.setting_value,updated_by=uid,updated_at=now(); return jsonb_build_object('success',true); end if;
     raise exception 'Unsupported export settings action: %',action;
   end if;
