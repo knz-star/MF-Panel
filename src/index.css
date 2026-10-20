@@ -1,0 +1,94 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Nastaliq+Urdu:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
+@import "./features/landing/landing-styles.css";
+
+@layer base {
+  body {
+    font-family: 'Inter', 'Noto Nastaliq Urdu', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+
+/* MF MPanel premium app shell inspired by the supplied mobile UI references */
+@layer base {
+  html { background: #f5f7ff; }
+  body { background: #f5f7ff; color: #111827; }
+  button, a { -webkit-tap-highlight-color: transparent; }
+}
+.mf-app-shell {
+  background:
+    radial-gradient(ellipse at 8% 0%, rgba(105, 139, 255, .13), transparent 38%),
+    radial-gradient(ellipse at 95% 16%, rgba(85, 221, 255, .11), transparent 30%),
+    linear-gradient(180deg, #f7f8fc 0%, #f2f5fb 100%);
+}
+.mf-topbar {
+  background: rgba(255,255,255,.76);
+  border-bottom: 1px solid rgba(255,255,255,.9);
+  box-shadow: 0 8px 30px rgba(25, 41, 82, .035);
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+}
+.mf-brand-mark {
+  background: linear-gradient(145deg, #171923 0%, #30344d 100%);
+  box-shadow: 0 8px 20px rgba(33, 39, 75, .2), inset 0 1px 0 rgba(255,255,255,.2);
+}
+.mf-logout {
+  color: #475569;
+  background: rgba(255,255,255,.8);
+  border: 1px solid rgba(210,219,238,.9);
+  box-shadow: 0 4px 14px rgba(25,41,82,.05);
+}
+.mf-logout:hover { color: #be123c; background: #fff1f2; border-color: #fecdd3; }
+.mf-bottom-pill {
+  min-height: 78px;
+  background: rgba(255,255,255,.87);
+  border: 1px solid rgba(255,255,255,.98);
+  box-shadow: 0 18px 50px -18px rgba(17,24,39,.25), 0 4px 12px rgba(29,48,92,.08), inset 0 1px 0 rgba(255,255,255,.95);
+  backdrop-filter: blur(28px) saturate(1.6);
+  -webkit-backdrop-filter: blur(28px) saturate(1.6);
+}
+.mf-bottom-item {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  height: 56px;
+  align-items: center;
+  justify-content: center;
+  color: #52586a;
+  border-radius: 22px;
+  transition: color .2s ease, transform .2s ease;
+}
+.mf-bottom-item:hover { color: #2563eb; transform: translateY(-1px); }
+.mf-bottom-item.is-active { color: #171923; }
+.mf-active-dot {
+  position: absolute;
+  bottom: 1px;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37,99,235,.10);
+}
+@media (max-width: 480px) {
+  .mf-bottom-pill { min-height: 72px; padding: 6px 8px; border-radius: 29px; }
+  .mf-bottom-item { height: 52px; }
+  main { scroll-padding-bottom: 100px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mf-bottom-item { transition: none; }
+}
+
+/* Role-aware bottom navigation labels */
+.mf-bottom-item { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-width: 0; }
+.mf-bottom-label { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; line-height: 1.1; font-weight: 650; letter-spacing: -.01em; }
+.mf-bottom-item.is-active .mf-bottom-label { color: #1d4ed8; }
+@media (max-width: 380px) { .mf-bottom-label { font-size: 8px; } .mf-bottom-pill { padding-left: 5px; padding-right: 5px; gap: 0; } }
+
+/* Urdu-first support for user help and review screens */
+[lang="ur"], .font-urdu { font-family: "Noto Nastaliq Urdu", serif; direction: rtl; }
