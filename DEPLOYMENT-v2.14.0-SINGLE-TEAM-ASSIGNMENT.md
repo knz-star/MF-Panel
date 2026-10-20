@@ -1,4 +1,4 @@
-# MF MPanel v2.14.0 — Single-Team Assignment and RPC Fix
+# MF MPanel v2.14.1 — Single-Team Assignment and RPC Fix
 
 ## What changed
 
@@ -32,7 +32,7 @@ Do not apply a migration twice if your live migration inventory already shows it
 4. Deploy to a Vercel preview first. Verify login, Evidence pairing code creation, automatic assigned-team routing, cross-team URL access denial, assigned link export, checking actions, organization report sharing, and Admin bulk delete using at least two different team accounts plus the Admin account.
 5. Promote to production only after those checks pass.
 
-## Verification completed in this package workspace
+## Verification status for this package workspace
 
 - TypeScript/TSX syntax transpilation: 88 source files, zero syntax diagnostics.
 - Relative import resolution scan: passed.
