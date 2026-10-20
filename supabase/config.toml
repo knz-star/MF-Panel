@@ -1,0 +1,19 @@
+project_id = "nvzvyzgantmtwjfnrqdo"
+
+[functions.mfp-evidence-linking]
+verify_jwt = false
+
+[functions.mfp-evidence-performance]
+verify_jwt = true
+
+[functions.mfp-team-analytics]
+verify_jwt = true
+
+[functions.mfp-workflow-control]
+verify_jwt = true
+
+[functions.mfp-score-scheduler]
+verify_jwt = false
+
+[functions.mfp-link-workflow]
+verify_jwt = true
