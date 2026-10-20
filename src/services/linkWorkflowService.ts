@@ -1,9 +1,7 @@
-import { supabase } from '../lib/supabase';
+import { invokeWebsiteApi } from './webApiClient';
 export type AssignedLink = { id:string; profileId:string; mfpProfileId?:string|null; sourceProfileId:string; linkId:string; url:string; platform:string; requiredScreenshots:number; notes:string; assignedAt:string };
 async function call<T>(body:Record<string,unknown>):Promise<T>{
- const {data,error}=await supabase.functions.invoke('mfp-link-workflow',{body});
- if(error)throw new Error(error.message||'MF MPanel link workflow request failed');
- if(data?.error)throw new Error(String(data.error));return data as T;
+ return invokeWebsiteApi<T>('mfp-link-workflow', body);
 }
 export type LinkSummary={platformCounts:{platform:string;available_count:number}[];availableTotal:number;systemPending:number};
 export const getLinkSummary=()=>call<LinkSummary>({action:'summary'});

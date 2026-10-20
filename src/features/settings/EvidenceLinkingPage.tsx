@@ -10,9 +10,9 @@ const friendlyError = (error: unknown) => {
   const message = error instanceof Error ? error.message.toLowerCase() : '';
   if (code.includes('invalid-pairing-code') || message.includes('invalid, expired, or already used')) return 'This code is not active anymore. Generate a fresh code and enter all 6 digits within 10 minutes.';
   if (message.includes('same mf mpanel account') || message.includes('account mismatch')) return 'Account mismatch: sign in to MF Evidence with the same MF MPanel account that generated this code.';
-  if (code.includes('functions/not-found') || code.includes('not-found')) return 'The Evidence linking endpoint could not be found. Check the mfp-evidence-linking deployment.';
-  if (code.includes('functions/unavailable') || code.includes('unavailable')) return 'Supabase is temporarily unreachable. Check your internet connection and retry.';
-  if (code.includes('functions/internal') || code.includes('internal')) return 'The linking service returned a server error. Check Supabase Edge Function logs and retry.';
+  if (code.includes('rpc/not-found') || code.includes('not-found')) return 'Evidence linking database operations are unavailable. Confirm the latest Supabase SQL migration is applied.';
+  if (code.includes('rpc/unavailable') || code.includes('unavailable')) return 'Supabase is temporarily unreachable. Check your internet connection and retry.';
+  if (code.includes('rpc/internal') || code.includes('internal')) return 'The linking operation returned a database error. Check Supabase migration and permissions, then retry.';
   if (code.includes('resource-exhausted')) return 'Too many active codes. Cancel an old code or wait for it to expire.';
   if (code.includes('permission-denied')) return 'Your account is not authorized for Evidence access. Confirm your team assignment and use the same account on both devices.';
   if (code.includes('failed-precondition')) return error instanceof Error ? error.message : 'Your team assignment needs approval.';

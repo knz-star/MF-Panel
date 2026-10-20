@@ -1,4 +1,4 @@
-import { invokeEdgeFunction } from './edgeFunctionClient';
+import { invokeWebsiteApi } from './webApiClient';
 
 export type EvidencePeriod = 'daily' | 'weekly' | 'days7' | 'days14' | 'monthly' | 'days90';
 export interface EvidencePerformance {
@@ -27,7 +27,7 @@ export interface AdminEvidencePerformance {
 }
 
 async function invoke<T>(action: string, payload: Record<string, unknown> = {}): Promise<T> {
-  return invokeEdgeFunction<T>('mfp-evidence-performance', { action, ...payload });
+  return invokeWebsiteApi<T>('mfp-evidence-performance', { action, ...payload });
 }
 
 export const getEvidencePerformance = (period: EvidencePeriod) => invoke<EvidencePerformance>('getPerformance', { period });

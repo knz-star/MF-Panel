@@ -1,4 +1,4 @@
-import { invokeEdgeFunction } from './edgeFunctionClient';
+import { invokeWebsiteApi } from './webApiClient';
 
 export type ManagedTeam = 'searching' | 'checking' | 'reports' | 'evidence';
 export interface TeamMemberMetric {
@@ -14,7 +14,7 @@ export interface TeamAnalyticsData {
   admins: Array<{ userId: string; name: string; email: string }>;
 }
 async function call<T>(action: string, payload: Record<string, unknown> = {}): Promise<T> {
-  return invokeEdgeFunction<T>('mfp-team-analytics', { action, ...payload });
+  return invokeWebsiteApi<T>('mfp-team-analytics', { action, ...payload });
 }
 export const getTeamAnalytics = (days: 7 | 14) => call<TeamAnalyticsData>('getAnalytics', { days });
 export const assignTeamAdmin = (team: ManagedTeam, userId: string | null) => call<{success:boolean}>('assignTeamAdmin', { team, userId });

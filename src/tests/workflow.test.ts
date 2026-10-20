@@ -21,7 +21,7 @@ async function runTests() {
   console.log('--- Running MF MPanel Workflow Tests ---');
 
   console.log('\nTest Suite 0: Error Source Diagnostics');
-  assert(diagnoseError({ code: 'functions/internal', message: 'Internal server error' }).source === 'BACKEND_EDGE_FUNCTIONS', 'Classified callable internal errors as Supabase Edge Function backend');
+  assert(diagnoseError({ code: 'rpc/internal', message: 'Internal server error' }).source === 'BACKEND_EDGE_FUNCTIONS', 'Classified callable internal errors as Supabase database operation backend');
   assert(diagnoseError({ code: 'permission-denied', message: 'Missing or insufficient permissions' }).source === 'BACKEND_DATABASE', 'Classified Supabase database permission errors as backend rules/service');
   assert(diagnoseError({ name: 'TypeError', message: 'Cannot read properties of undefined' }).source === 'FRONTEND', 'Classified JavaScript runtime errors as frontend');
   assert(diagnoseError({ code: 'invalid-api-key', message: 'invalid API key' }).source === 'SUPABASE_AUTH', 'Classified invalid Supabase keys as Authentication/configuration');

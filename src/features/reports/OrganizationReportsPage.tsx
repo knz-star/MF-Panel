@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { CalendarRange, Download, FileText, RefreshCw, Share2, Users, Link2, Activity, AlertTriangle } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { invokeWebsiteApi } from '../../services/webApiClient';
 import { collection, db, getDocs } from '../../lib/supabaseDocumentStore';
 import { useAuth } from '../auth/AuthContext';
 
@@ -55,13 +55,12 @@ export const OrganizationReportsPage: React.FC = () => {
     try {
       if (!currentUser) throw new Error('Sign in is required.');
       if (period === 'custom' && (!startDate || !endDate || startDate > endDate)) throw new Error('Choose a valid custom date range.');
-      const { data, error: invokeError } = await supabase.functions.invoke('mfp-organization-reports', { body: { action: 'generate', period, startDate, endDate, title, shareTeams, shareGenderGroups } });
-      if (invokeError) throw invokeError;
+      const data = await invokeWebsiteApi<any>('mfp-organization-reports', { action: 'generate', period, startDate, endDate, title, shareTeams, shareGenderGroups });
       if (!data?.success || !data?.report) throw new Error(data?.error || 'Report generation did not return a saved report.');
       setReport(data.report); setNotice(`Report ${data.report.reportId} generated and saved. Shared with workspace teams: ${(data.report.sharedTeams ?? []).join(', ') || 'none'}; gender groups: ${(data.report.sharedGenderGroups ?? []).join(', ') || 'none'}. Admins can always access the private organization master.`);
       await loadSaved();
     } catch (err: any) {
-      setError(err?.message || 'Could not generate report. Check the Edge Function deployment and permissions.');
+      setError(err?.message || 'Could not generate report. Check your team assignment and database permissions.');
     } finally { setBusy(false); }
   };
   const downloadJson = (item: Report) => {

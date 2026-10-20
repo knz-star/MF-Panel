@@ -28,13 +28,45 @@ export async function hasAdminRecord(uid: string): Promise<boolean> {
 }
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
-  // Authorization must never trust a localStorage profile. Read the persisted
-  // Supabase record first; local cache is for non-sensitive lists only.
-
-  // Fetch the persisted profile with a bounded wait.
-  // Use the server so a cached/local profile cannot hide a deployed-rules error.
-  // Permission-denied and network failures must reach the UI diagnostics instead
-  // of being misreported as a brand-new user with no profile.
+  // Canonical authorization source: Supabase profile row. The legacy document
+  // mirror is merged only for non-security metadata such as pledge acceptance.
+  const { data: canonical, error: canonicalError } = await withTimeout(
+    Promise.resolve(supabase.from('mfp_user_profiles')
+      .select('user_id,email,display_name,gender,gender_group,role,account_status,team_key,team_confirmed,allowed_modules,preferences,created_at,updated_at')
+      .eq('user_id', uid).maybeSingle()),
+    7000,
+  );
+  if (canonicalError) throw canonicalError;
+  let legacy: Record<string, any> = {};
+  try {
+    const { data } = await supabase.from('mfp_documents').select('data')
+      .eq('collection_name', COLLECTION).eq('document_id', uid).maybeSingle();
+    legacy = (data?.data && typeof data.data === 'object' ? data.data : {}) as Record<string, any>;
+  } catch { /* Optional legacy mirror; canonical authorization remains authoritative. */ }
+  if (canonical) {
+    const modules = Array.isArray(canonical.allowed_modules) ? canonical.allowed_modules : [];
+    const profile: UserProfile = {
+      ...legacy,
+      uid: canonical.user_id,
+      email: canonical.email ?? legacy.email ?? '',
+      displayName: canonical.display_name ?? legacy.displayName ?? canonical.email?.split('@')[0] ?? 'User',
+      gender: canonical.gender === 'male' || canonical.gender === 'female' ? canonical.gender : legacy.gender,
+      genderGroup: canonical.gender_group ?? legacy.genderGroup,
+      role: canonical.role,
+      accountStatus: canonical.account_status,
+      team: canonical.team_key ?? undefined,
+      teamConfirmed: canonical.team_confirmed === true,
+      allowedModules: modules,
+      createdAt: canonical.created_at ?? legacy.createdAt,
+      updatedAt: canonical.updated_at ?? legacy.updatedAt,
+      pledgeAccepted: legacy.pledgeAccepted === true || (canonical.preferences && (canonical.preferences.pledgeAccepted === true || canonical.preferences.pledge_accepted === true)),
+      pledgeSignature: legacy.pledgeSignature,
+      pledgeAcceptedAt: legacy.pledgeAcceptedAt,
+    } as UserProfile;
+    localStore.upsertUser(profile);
+    return profile;
+  }
+  // Backwards-compatible fallback only when a canonical row does not yet exist.
   const snap = await withTimeout(getDocFromServer(doc(db, COLLECTION, uid)), 7000);
   if (!snap.exists()) return null;
   const data = snap.data() as UserProfile;
@@ -141,7 +173,7 @@ export async function updateUserRoleAndModules(params: {
     localStore.upsertUser(existing);
   }
 
-  // mfp_user_profiles is the canonical authorization source used by Edge Functions.
+  // mfp_user_profiles is the canonical authorization source used by database operations.
   // Update it first; otherwise the website can show a module grant that the backend rejects.
   const now = new Date().toISOString();
   const { error: canonicalError } = await supabase.from('mfp_user_profiles').update({
@@ -170,7 +202,7 @@ export async function updateUserRoleAndModules(params: {
 }
 
 export async function listAllUsers(limitCount = 100): Promise<UserProfile[]> {
-  // Read the same canonical profile rows that authorize Edge Functions, then merge
+  // Read the same canonical profile rows that authorize database operations, then merge
   // the optional legacy document fields (pledge metadata, display labels, etc.).
   try {
     const { data, error } = await supabase.from('mfp_user_profiles')

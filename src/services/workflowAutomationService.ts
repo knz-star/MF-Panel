@@ -1,10 +1,10 @@
-import { invokeEdgeFunction } from './edgeFunctionClient';
+import { invokeWebsiteApi } from './webApiClient';
 import type { ExtractedBatchItem } from '../utils/urlExtractor';
 
 export interface IntakeResult { success: boolean; created: number; queued?: number; backlogged?: number; duplicates: number; invalid: number; profileLinks?: number; postedLinks?: number; submittedCount?: number; message: string; profileIds?: string[]; reviewIds?: string[] }
 export interface ResetPreview { success: boolean; testingRecords: number; workflowRecords: number; byCollection: Record<string, number>; resetScope: string }
 async function invoke<T>(payload: Record<string, unknown>): Promise<T> {
-  return invokeEdgeFunction<T>('mfp-workflow-control', payload);
+  return invokeWebsiteApi<T>('mfp-workflow-control', payload);
 }
 export function autoIngestLinks(items: ExtractedBatchItem[], isTestData = false): Promise<IntakeResult> {
   return invoke<IntakeResult>({ action: 'ingestLinks', isTestData, items: items.map(item => ({ rawUrl: item.extractedUrl, canonicalUrl: item.normalized.normalizedUrl, platform: item.normalized.platform, error: item.normalized.error ?? '', notes: item.senderInfo ? `Source: ${item.senderInfo}` : '' })) });

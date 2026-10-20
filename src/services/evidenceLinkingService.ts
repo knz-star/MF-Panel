@@ -1,8 +1,8 @@
 import { supabase } from '../lib/supabase';
-import { httpsCallable, getFunctions } from '../lib/supabaseFunctionsCompat';
+import { invokeWebsiteApi } from './webApiClient';
 export type Unsubscribe = () => void;
-const functions = getFunctions();
-const call = <T, R>(name: string, data?: T) => httpsCallable<T, R>(functions, name)(data as T).then(result => result.data);
+const actionMap: Record<string,string> = { createEvidencePairing:'createPairing', cancelEvidencePairing:'cancelPairing', disconnectEvidenceApp:'disconnect', getEvidenceDashboardSummary:'getSummary', getEvidenceLinksPage:'getLinksPage', recordEvidenceLinksDownload:'recordDownload', listEvidenceConnectionsForAdmin:'listAdmin', redeemEvidencePairing:'redeemPairing' };
+const call = <T, R>(name: string, data?: T) => invokeWebsiteApi<R>('mfp-evidence-linking', { action: actionMap[name] ?? name, ...((data as any) ?? {}) });
 export interface PairingResult { code: string; requestId: string; expiresAt: number; expiresInSeconds: number }
 export interface EvidenceRegistration { id?: string; userId: string; teamId: string; applicationId: string; status: string; activationStatus?: string; userVerified?: boolean; teamAuthorized?: boolean; deviceLabel?: string | null; linkedAt?: string | null; lastSeenAt?: string | null; revokedAt?: string | null }
 function mapRegistration(row: any): EvidenceRegistration | null {
