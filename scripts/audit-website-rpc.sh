@@ -14,5 +14,20 @@ if ! grep -q "mfp_select_team" supabase/migrations/20261020133000_mfp_web_rpc_re
   echo "FAIL: secure team-switch RPC is missing." >&2
   exit 1
 fi
-echo "PASS: website source uses database RPCs; no Edge Function invocations found."
+MIGRATION="supabase/migrations/20261020133000_mfp_web_rpc_replacements.sql"
+for legacy_policy in 'MFP users read permitted documents' 'mfp_documents_select_access' 'MFP users update own non-public documents' 'mfp_documents_update_access' 'MFP users delete own non-public documents' 'mfp_documents_delete_access' 'MFP users create own non-public documents' 'mfp_documents_insert_access'; do
+  if ! grep -Fq "drop policy if exists \"${legacy_policy}\" on public.mfp_documents" "$MIGRATION" && ! grep -Fq "drop policy if exists ${legacy_policy} on public.mfp_documents" "$MIGRATION"; then
+    echo "FAIL: legacy permissive policy is not removed: ${legacy_policy}" >&2
+    exit 1
+  fi
+done
+if ! grep -q "Administrator access required'; end if;" "$MIGRATION" || ! grep -q "action='getAdminPerformance' and not admin_ok" "$MIGRATION"; then
+  echo "FAIL: admin performance RPC permission guard is missing." >&2
+  exit 1
+fi
+if ! grep -Fq "collection_name='profiles' and team_key='searching' and (select mfp_private.current_team())='checking'" "$MIGRATION"; then
+  echo "FAIL: checking users are not constrained to assigned Searching-team source profiles." >&2
+  exit 1
+fi
+echo "PASS: website uses database RPCs and conflicting legacy RLS policies are removed."
 echo "INFO: mobile-compat/mfp-evidence-linking is reference source for the existing Android bridge only."

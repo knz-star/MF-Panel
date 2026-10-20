@@ -371,12 +371,24 @@ returns boolean language sql stable security definer set search_path=public,auth
 $$;
 revoke all on function mfp_private.is_assigned_checker(text) from public,anon;
 grant execute on function mfp_private.is_assigned_checker(text) to authenticated;
+-- Remove legacy permissive policies first. PostgreSQL combines permissive policies with OR,
+-- so leaving any older broad policy in place would bypass the team-scoped policy below.
+-- Keep the separate 'Public read landing settings and active assets' policy intact.
+drop policy if exists "MFP users read permitted documents" on public.mfp_documents;
+drop policy if exists mfp_documents_select_access on public.mfp_documents;
+drop policy if exists "MFP users update own non-public documents" on public.mfp_documents;
+drop policy if exists mfp_documents_update_access on public.mfp_documents;
+drop policy if exists "MFP users delete own non-public documents" on public.mfp_documents;
+drop policy if exists mfp_documents_delete_access on public.mfp_documents;
+drop policy if exists "MFP users create own non-public documents" on public.mfp_documents;
+drop policy if exists mfp_documents_insert_access on public.mfp_documents;
+
 drop policy if exists mfp_documents_select on public.mfp_documents;
 create policy mfp_documents_select on public.mfp_documents for select to authenticated using (
   (select mfp_private.is_admin())
   or (collection_name='users' and document_id=(select auth.uid())::text and owner_uid=(select auth.uid()))
   or (collection_name='profiles' and (select mfp_private.current_team())='searching' and team_key='searching' and owner_uid=(select auth.uid()))
-  or (collection_name='profiles' and (select mfp_private.current_team())='checking' and (select mfp_private.is_assigned_checker(mfp_documents.document_id)))
+  or (collection_name='profiles' and team_key='searching' and (select mfp_private.current_team())='checking' and (select mfp_private.is_assigned_checker(mfp_documents.document_id)))
   or (collection_name='posts' and (select mfp_private.current_team())='checking' and team_key='checking' and owner_uid=(select auth.uid()))
   or (collection_name='checkingRecords' and (select mfp_private.current_team())='checking' and team_key='checking' and owner_uid=(select auth.uid()))
   or (collection_name in ('workflowEvents','auditLogs') and team_key=(select mfp_private.current_team()) and owner_uid=(select auth.uid()))
@@ -385,6 +397,20 @@ create policy mfp_documents_select on public.mfp_documents for select to authent
   or (collection_name='organizationReports' and owner_uid=(select auth.uid()))
   or (collection_name='organizationReports' and coalesce(data->'sharedTeams','[]'::jsonb) ? (select mfp_private.current_team()))
   or (collection_name='organizationReports' and coalesce(data->'sharedGenderGroups','[]'::jsonb) ? (select mfp_private.current_gender_group()))
+  or (owner_uid=(select auth.uid()) and collection_name not in ('users','profiles','posts','checkingRecords','workflowEvents','auditLogs','reportJobs','reportPackages','organizationReports'))
+  or (team_key=(select mfp_private.current_team()) and collection_name not in ('users','profiles','posts','checkingRecords','workflowEvents','auditLogs','reportJobs','reportPackages','organizationReports'))
+);
+drop policy if exists mfp_documents_insert on public.mfp_documents;
+create policy mfp_documents_insert on public.mfp_documents for insert to authenticated with check (
+  (select mfp_private.is_admin())
+  or (
+    exists(select 1 from public.mfp_user_profiles up where up.user_id=(select auth.uid()) and up.account_status='ACTIVE')
+    and collection_name not in ('landingAssets','siteSettings')
+    and (
+      (owner_uid=(select auth.uid()) and (team_key is null or team_key=(select mfp_private.current_team())))
+      or (team_key is not null and team_key=(select mfp_private.current_team()))
+    )
+  )
 );
 drop policy if exists mfp_documents_update on public.mfp_documents;
 create policy mfp_documents_update on public.mfp_documents for update to authenticated
@@ -392,18 +418,25 @@ using (
   (select mfp_private.is_admin())
   or (collection_name='users' and document_id=(select auth.uid())::text and owner_uid=(select auth.uid()))
   or (collection_name='profiles' and (select mfp_private.current_team())='searching' and team_key='searching' and owner_uid=(select auth.uid()))
-  or (collection_name='profiles' and (select mfp_private.current_team())='checking' and (select mfp_private.is_assigned_checker(mfp_documents.document_id)))
+  or (collection_name='profiles' and team_key='searching' and (select mfp_private.current_team())='checking' and (select mfp_private.is_assigned_checker(mfp_documents.document_id)))
   or (collection_name in ('posts','checkingRecords') and (select mfp_private.current_team())='checking' and team_key='checking' and owner_uid=(select auth.uid()))
   or (collection_name in ('reportJobs','reportPackages') and (select mfp_private.current_team())='reports' and team_key='reports' and owner_uid=(select auth.uid()))
+  or (owner_uid=(select auth.uid()) and collection_name not in ('users','profiles','posts','checkingRecords','workflowEvents','auditLogs','reportJobs','reportPackages','organizationReports') and (team_key is null or team_key=(select mfp_private.current_team())))
+  or (team_key=(select mfp_private.current_team()) and collection_name not in ('users','profiles','posts','checkingRecords','workflowEvents','auditLogs','reportJobs','reportPackages','organizationReports'))
 )
 with check (
   (select mfp_private.is_admin())
   or (collection_name='users' and document_id=(select auth.uid())::text and owner_uid=(select auth.uid()))
   or (collection_name='profiles' and (select mfp_private.current_team())='searching' and team_key='searching' and owner_uid=(select auth.uid()))
-  or (collection_name='profiles' and (select mfp_private.current_team())='checking' and (select mfp_private.is_assigned_checker(mfp_documents.document_id)))
+  or (collection_name='profiles' and team_key='searching' and (select mfp_private.current_team())='checking' and (select mfp_private.is_assigned_checker(mfp_documents.document_id)))
   or (collection_name in ('posts','checkingRecords') and (select mfp_private.current_team())='checking' and team_key='checking' and owner_uid=(select auth.uid()))
   or (collection_name in ('reportJobs','reportPackages') and (select mfp_private.current_team())='reports' and team_key='reports' and owner_uid=(select auth.uid()))
+  or (owner_uid=(select auth.uid()) and collection_name not in ('users','profiles','posts','checkingRecords','workflowEvents','auditLogs','reportJobs','reportPackages','organizationReports') and (team_key is null or team_key=(select mfp_private.current_team())))
+  or (team_key=(select mfp_private.current_team()) and collection_name not in ('users','profiles','posts','checkingRecords','workflowEvents','auditLogs','reportJobs','reportPackages','organizationReports'))
 );
 drop policy if exists mfp_documents_delete on public.mfp_documents;
-create policy mfp_documents_delete on public.mfp_documents for delete to authenticated using ((select mfp_private.is_admin()));
+create policy mfp_documents_delete on public.mfp_documents for delete to authenticated using (
+  (select mfp_private.is_admin())
+  or (owner_uid=(select auth.uid()) and collection_name not in ('users','profiles','posts','checkingRecords','workflowEvents','auditLogs','reportJobs','reportPackages','organizationReports') and (team_key is null or team_key=(select mfp_private.current_team())))
+);
 notify pgrst, 'reload schema';
