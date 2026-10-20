@@ -1,70 +1,48 @@
-# MF MPanel v2.3.1 — Evidence Dashboard, Activity Score & Pairing
+# MF MPanel v2.13.0 — Website RPC & Team Isolation
 
-MF MPanel is a Vite + React + TypeScript workflow dashboard for Searching, Checking, Evidence linking and report preparation. This version moves website authentication, workflow persistence, Storage uploads and Evidence linking from Firebase to Supabase.
+MF MPanel is a Vite + React + TypeScript workflow dashboard for Searching, Checking, Evidence linking and organization reporting. The current website source uses authenticated Supabase Postgres RPCs instead of browser calls to Supabase Edge Functions. The existing Android app source has not been changed.
 
 ## Supabase target
-- Project: `nvzvyzgantmtwjfnrqdo`
+- Project ref: `nvzvyzgantmtwjfnrqdo`
 - Region: `eu-west-3`
 - Client configuration: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`
-- Edge Function: `mfp-evidence-linking` (`verify_jwt = true`)
+- Database RPCs: `mfp_web_api`, `mfp_select_team`
 - Storage bucket: `mfp-assets`
 
-The public publishable key is safe for browser configuration when RLS is enabled. **Never place a Supabase service-role/secret key in frontend code, `.env` variables prefixed with `VITE_`, or this ZIP.**
+The public publishable key is safe for browser configuration when RLS is enabled. **Never place a Supabase service-role/secret key in frontend code or any `VITE_` variable.**
 
-## Architecture
-- `src/lib/supabase.ts` — Supabase client and public config.
-- `src/lib/supabaseDocumentStore.ts` — app-facing document adapter backed by `mfp_documents` and Postgres Realtime.
-- `src/lib/supabaseAuthCompat.ts` — temporary compatibility helpers around Supabase Auth.
-- `src/lib/supabaseStorageCompat.ts` — Supabase Storage adapter for `mfp-assets`.
-- `src/lib/supabaseFunctionsCompat.ts` — callable-style adapter for `mfp-evidence-linking`.
-- `supabase/migrations/` — isolated `mfp_*` schema, RLS, profile/team guardrails, normalized workflow tables and triggers.
-- `supabase/functions/mfp-evidence-linking/` — Edge Function source deployed to the target project.
+## Current architecture
+- `src/lib/supabase.ts` — Supabase client and public configuration.
+- `src/lib/supabaseDocumentStore.ts` — document adapter backed by `mfp_documents` and Postgres Realtime.
+- `src/services/webApiClient.ts` — authenticated RPC client for website actions.
+- `supabase/migrations/` — isolated `mfp_*` schema, RLS, workflow tables, stable profile/post IDs, and RPC replacements.
+- `mobile-compat/mfp-evidence-linking/` — reference source for the already-deployed Android pairing bridge only. It is not a website deployment target. Do not delete the live Android pairing endpoint until the existing Android app is separately migrated and tested.
 
-The target Supabase project was reset on 2026-10-16: all rows in public application tables and all Supabase Auth users were cleared while database schemas, table definitions, RLS policies, functions, migrations, and deployed Edge Functions were preserved. Storage object count verified as zero; three Storage bucket definitions remain. Review `RESET-REPORT-v2.2.1.md` before use. MF MPanel writes its workflow data to `mfp_*` tables only.
+## Team workspace behavior
+- Users with multiple assigned workspaces are shown team selection on first load/sign-in; selecting a team persists the active `team_key` through `mfp_select_team`.
+- Users with one assigned workspace are routed directly to that team's dashboard after the active team is confirmed.
+- The app shell shows the selected team's work navigation plus shared reports/profile. Direct navigation to a different team route returns to team selection.
+- The Evidence button opens `/dashboard/evidence-linking`; it no longer redirects to the Evidence Performance page.
+- Admins retain organization-wide access. Team Admin analytics is scoped to the selected/managed team.
 
-## Evidence dashboard routes
-
-Canonical routes are `/dashboard/evidence-linking` and `/dashboard/get-links`. Compatibility routes `/evidence`, `/evidence/dashboard`, and `/dashboard/evidence` now open the Evidence Performance Dashboard; Evidence team login redirects there automatically. Pairing stays at `/dashboard/evidence-linking`, and `/evidence/get-links` remains available for link downloads.
-
-Pairing codes are six numeric digits (leading zeroes are valid), expire after 10 minutes, are stored as SHA-256 hashes, and can be redeemed only once by the same authenticated account. Repeated app linking uses the latest registration record so old revoked records do not break the dashboard.
-
-## Setup
+## Setup and validation
 
 ```sh
 npm install
-npm run dev
-```
-
-Before deploying the website, run:
-
-```sh
+npm run audit:source
+npm run test
+npm run test:acceptance
 npm run lint
-npm test
 npm run build
 ```
 
-Set these Netlify environment variables if you do not want to use the safe public defaults in `src/lib/supabase.ts`:
+The package includes the migration sequence in `DEPLOYMENT-v2.13.0-RPC-TEAM-ISOLATION.md`. Apply any missing migrations in timestamp order before deploying the frontend. The full Vite build and dependency-backed test suite were not verified in this environment because package installation timed out. The migration and website have not been applied/deployed to production from this workspace.
 
-- `VITE_SUPABASE_URL=https://nvzvyzgantmtwjfnrqdo.supabase.co`
-- `VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...`
+## Android compatibility note
+The Android source is unchanged. Website pairing-code creation now uses the database RPC, while the existing deployed Android bridge is retained for code redemption. Do not delete that live endpoint until the Android client has a separately tested replacement.
 
-**Backend status (2026-10-18):** the additive migrations `mfp_team_analytics_admins_20261018` and `mfp_auto_workflow_queues_20261018` were applied and verified in the specified Supabase project. The new workflow/analytics/scheduler Edge Functions are included as source but are **not yet deployed**; the existing `mfp-evidence-linking` function remains at live version 10. See `BACKEND-UPDATE-REPORT-v2.8.0.md` for verified facts and remaining deployment/tests.
-
-## Default administrator
-
-`knzbro602@gmail.com` is configured as the intended default administrator. The live `mfp_user_profiles` record is `ADMIN` and `ACTIVE` with all module permissions. The server-side `mfp_ensure_profile()` bootstrap grants this role only when that exact email is confirmed by Supabase Auth. Other users cannot promote themselves. Sign out and back in after an admin role change so the UI refreshes permissions.
-
-## Evidence app
-
-See `EVIDENCE-APP-INTEGRATION.md` for the Edge Function request contract. The Android source was not in the uploaded website ZIP; it must migrate to Supabase Auth before Firebase-issued tokens can be replaced. The Edge Function accepts only a valid Supabase JWT.
-
-## Important migration limits
-
-- Firebase Auth users/passwords and Firestore data were not imported because the supplied ZIP did not include a Firebase data export or trusted Firebase migration credentials. Existing Firebase passwords generally cannot be transferred; account recovery/re-registration is required.
-- Local browser cache is not a server backup. Export any required old data before retiring Firebase.
-- The project dependencies could not be installed in this environment because package registry access timed out. Static TypeScript parsing was checked, but a full `npm run lint`, `npm test` and `npm run build` still need to run in a network-enabled environment.
-
-See `MIGRATION-STATUS-v2.2.0.md`, `TEST_REPORT-v2.2.0.md`, and `RESET-REPORT-v2.2.1.md` for migration history, validation limits, reset verification, and remaining rollout tasks.
+## Historical notes
+The sections below describe earlier versions and may mention the old Edge Function architecture. For current deployment instructions, use `DEPLOYMENT-v2.13.0-RPC-TEAM-ISOLATION.md`.
 
 ## v2.3.1 — Evidence Performance Dashboard
 
@@ -90,3 +68,7 @@ See [`WORKFLOW-AUTOMATION-DEPLOYMENT-v2.7.0.md`](./WORKFLOW-AUTOMATION-DEPLOYMEN
 - Admin can clear explicitly tagged test data or perform a separately confirmed full MF MPanel workflow/evidence metadata reset.
 - Pairing function recognizes both the legacy anon key and newer publishable key in Android's unauthenticated email + six-digit-code redemption flow. Android source remains unchanged.
 - The source package has not been deployed to live Supabase; apply and test the documented migrations/functions before production handoff.
+
+## v2.13.0 — Website RPC & Team Isolation
+
+Website actions now use authenticated Supabase Postgres RPCs instead of Edge Function calls. See `DEPLOYMENT-v2.13.0-RPC-TEAM-ISOLATION.md` for migration order, the unchanged Android pairing bridge note, and the required staging verification steps.

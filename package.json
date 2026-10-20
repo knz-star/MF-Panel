@@ -1,7 +1,7 @@
 {
   "name": "mf-mpanel",
   "private": true,
-  "version": "2.12.0",
+  "version": "2.13.0",
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
@@ -10,7 +10,7 @@
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
     "test": "tsx src/tests/workflow.test.ts",
-    "audit:source": "bash scripts/audit-required-functions.sh",
+    "audit:source": "bash scripts/audit-website-rpc.sh",
     "test:acceptance": "tsx src/tests/acceptance-smoke.test.ts"
   },
   "dependencies": {

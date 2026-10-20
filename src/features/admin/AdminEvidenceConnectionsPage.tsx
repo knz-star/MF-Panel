@@ -1,14 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { RefreshCw, Smartphone, ShieldCheck, Unplug } from 'lucide-react';
-import { httpsCallable } from '../../lib/supabaseFunctionsCompat';
-import { getFunctions } from '../../lib/supabaseFunctionsCompat';
+import { invokeWebsiteApi } from '../../services/webApiClient';
 import { disconnectEvidence } from '../../services/evidenceLinkingService';
 
 type Connection = { id:string; userId:string; email:string; displayName:string; teamId:string; status:string; activationStatus:string; deviceLabel:string; linkedAt:number|null; lastSeenAt:number|null };
 const dateLabel = (n:number|null) => n ? new Date(n).toLocaleString() : '—';
 export const AdminEvidenceConnectionsPage: React.FC = () => {
   const [items,setItems] = useState<Connection[]>([]); const [loading,setLoading] = useState(true); const [error,setError] = useState('');
-  const refresh = useCallback(async () => { setLoading(true); setError(''); try { const fn = httpsCallable<unknown,{registrations:Connection[]}>(getFunctions(undefined,'us-central1'),'listEvidenceConnectionsForAdmin'); const result = await fn({}); setItems(result.data.registrations || []); } catch(e) { const err=e as {message?:string}; setError(err.message || 'Could not load Evidence connections. Verify the mfp-evidence-linking Edge Function and retry.'); } finally { setLoading(false); } },[]);
+  const refresh = useCallback(async () => { setLoading(true); setError(''); try { const result = await invokeWebsiteApi<{registrations:Connection[]}>('mfp-evidence-linking', { action: 'listAdmin' }); setItems(result.registrations || []); } catch(e) { const err=e as {message?:string}; setError(err.message || 'Could not load Evidence connections. Verify your admin permissions and the database migration, then retry.'); } finally { setLoading(false); } },[]);
   useEffect(()=>{ void refresh(); },[refresh]);
   const revoke = async (uid:string) => { if(!window.confirm('Revoke this user’s MF Evidence access?')) return; try { await disconnectEvidence(uid); await refresh(); } catch(e) { setError((e as {message?:string}).message || 'Could not revoke access.'); } };
   const active = items.filter(x=>x.status==='ACTIVE' && x.activationStatus==='ACTIVE').length;
