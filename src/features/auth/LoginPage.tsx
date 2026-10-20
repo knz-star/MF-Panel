@@ -1,0 +1,96 @@
+import React, { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { AlertCircle, ArrowRight, Eye, EyeOff, Lock, Mail, Shield } from 'lucide-react';
+import { useAuth } from './AuthContext';
+import { useLandingAssets } from '../landing/useLandingData';
+
+export const LoginPage: React.FC = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [diagnosticError, setDiagnosticError] = useState<unknown>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
+  const { loginWithEmail, loginWithGoogle, resendConfirmation } = useAuth();
+  const { assets: siteAssets } = useLandingAssets();
+  const siteBanner = siteAssets.find((asset) => asset.assetType === 'banner')?.imageUrl || 'https://i.postimg.cc/P5hbxNy7/20261015-112236.jpg';
+  const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/dashboard';
+
+  const friendlyError = (err: unknown) => {
+    const code = (err as { code?: string })?.code;
+    if (code === 'email_not_confirmed' || /email not confirmed/i.test(String((err as any)?.message || ''))) return 'Please confirm your email first. Check your inbox for the confirmation link.';
+    if (code === 'invalid_credentials' || code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') return 'Email ya password sahi nahi hai.';
+    if (code === 'invalid-api-key') return 'Supabase publishable key ya project URL invalid hai. Supabase configuration check karein.';
+    if (code === 'provider-disabled') return 'Supabase Dashboard → Authentication → Providers mein Email provider enable karein.';
+    if (code === 'too_many_requests' || code === 'auth/too-many-requests') return 'Bohat zyada attempts hue hain. Kuch dair baad dobara koshish karein.';
+    if (code === 'user_already_exists' || code === 'auth/email-already-in-use') return 'Is email ka account pehle se hai. Sign in karein ya password reset karein.';
+    if (code === 'permission-denied' || code === '42501') return 'Login ho gaya, lekin Supabase profile permission issue hai. mfp_user_profiles aur mfp_documents ki RLS policies verify karein; phir dobara login karein.';
+    return 'Sign in nahi ho saka. Email aur password check karein; agar masla barqarar rahe to admin se rabta karein.';
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError(null);
+    setNeedsConfirmation(false);
+    setResendMessage('');
+    setDiagnosticError(null);
+    setIsSubmitting(true);
+    try {
+      await loginWithEmail(email, password);
+      navigate(from, { replace: true });
+    } catch (err) {
+      setDiagnosticError(err);
+      const code = (err as { code?: string })?.code;
+      const message = String((err as { message?: string })?.message || '');
+      setNeedsConfirmation(code === 'email_not_confirmed' || /email not confirmed/i.test(message));
+      setError(friendlyError(err));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGoogle = async () => {
+    setError(null);
+    setDiagnosticError(null);
+    setIsSubmitting(true);
+    try {
+      await loginWithGoogle();
+    } catch (err) {
+      setDiagnosticError(err);
+      setError(friendlyError(err));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen flex-col justify-center bg-gradient-to-b from-[#eef3ff] via-[#f5f5f7] to-white px-4 py-8 sm:px-6">
+      <div className="mx-auto mb-6 w-full max-w-3xl overflow-hidden rounded-[28px] border border-white/80 bg-white shadow-[0_20px_60px_-30px_rgba(15,23,42,0.3)]">
+        <img src={siteBanner} alt="MF MPanel banner" className="block aspect-video w-full object-cover" />
+      </div>
+      <div className="mx-auto w-full max-w-md text-center">
+        <Link to="/" className="mb-5 inline-flex items-center gap-2"><span className="grid h-9 w-9 place-items-center rounded-xl bg-slate-950 text-sm font-bold text-white">MF</span><span className="text-xl font-semibold tracking-tight text-slate-950">MF MPanel</span></Link>
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-950">Sign in to your account</h1>
+        <p className="mt-2 text-sm text-slate-600">Use your Supabase Auth account to continue.</p>
+      </div>
+      <div className="mx-auto mt-8 w-full max-w-md rounded-[28px] border border-white/80 bg-white/90 p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.25)] backdrop-blur-xl sm:p-8">
+        <div className="mb-5 flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 p-3"><Shield className="mt-0.5 h-4 w-4 shrink-0 text-blue-700" /><p className="text-xs leading-relaxed text-slate-600">Admin permissions are verified server-side through the protected Supabase profile and RLS. There is no one-click or simulated admin login.</p></div>
+        {error && <div role="alert" className="mb-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /><span className="break-words">{error}</span></div>}
+        {needsConfirmation && <div className="mb-4 space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-3"><p className="text-sm font-semibold text-amber-900">Please confirm your email first.</p><button type="button" disabled={isSubmitting} onClick={() => { setIsSubmitting(true); setResendMessage(''); void resendConfirmation(email).then(() => setResendMessage('Confirmation email sent. Check your inbox and spam folder.')).catch(() => setResendMessage('Could not resend right now. Please wait and try again.')).finally(() => setIsSubmitting(false)); }} className="rounded-lg bg-amber-900 px-3 py-2 text-xs font-semibold text-white disabled:opacity-60">Resend confirmation email</button>{resendMessage && <p role="status" className="text-xs text-amber-900">{resendMessage}</p>}</div>}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <label className="block text-sm font-medium text-slate-700">Email address<div className="relative mt-1.5"><Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-xl border border-slate-200 py-3 pl-10 pr-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10" placeholder="you@example.com" /></div></label>
+          <label className="block text-sm font-medium text-slate-700">Password<div className="relative mt-1.5"><Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input type={showPassword ? 'text' : 'password'} required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-xl border border-slate-200 py-3 pl-10 pr-12 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10" placeholder="Your password" /><button type="button" onClick={() => setShowPassword((v) => !v)} aria-label={showPassword ? 'Hide password' : 'Show password'} className="absolute right-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></label>
+          <div className="flex justify-end"><Link to="/forgot-password" className="text-xs font-medium text-blue-700 hover:underline">Forgot password?</Link></div>
+          <button type="submit" disabled={isSubmitting} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-60">{isSubmitting ? 'Signing in…' : 'Sign in'}<ArrowRight className="h-4 w-4" /></button>
+        </form>
+        <div className="my-4 flex items-center gap-3"><span className="h-px flex-1 bg-slate-200" /><span className="text-xs text-slate-400">OR</span><span className="h-px flex-1 bg-slate-200" /></div>
+        <button onClick={() => void handleGoogle()} disabled={isSubmitting} className="min-h-11 w-full rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60">Continue with Google</button>
+        <p className="mt-6 text-center text-sm text-slate-500">New to MF MPanel? <Link to="/signup" className="font-semibold text-blue-700 hover:underline">Create account</Link></p>
+      </div>
+    </div>
+  );
+};

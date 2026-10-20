@@ -1,0 +1,56 @@
+/*
+  PASTE INTO YOUR EXISTING GLOBAL STYLESHEET (the one that has @import "tailwindcss";)
+  Do not create a new CSS entry file.
+
+  Also add this to index.html <head> if Inter / Outfit are not loaded yet:
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500&display=swap" rel="stylesheet">
+*/
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ---- Logo marquee (pure CSS, no JS loop) ---- */
+@keyframes mf-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+.mf-marquee {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 8%, #000 92%, transparent 100%);
+          mask-image: linear-gradient(to right, transparent 0, #000 8%, #000 92%, transparent 100%);
+}
+
+.mf-marquee-track {
+  display: flex;               /* no gap: spacing is padding on each <li>, so -50% loops exactly */
+  width: max-content;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  animation: mf-marquee var(--mf-marquee-duration, 40s) linear infinite;
+  will-change: transform;
+}
+
+.mf-marquee:hover .mf-marquee-track,
+.mf-marquee:focus-within .mf-marquee-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mf-marquee-track { animation: none; }
+  .mf-marquee { overflow-x: auto; }
+}
+
+/* Lighter rendering for devices/users that ask for less transparency */
+@media (prefers-reduced-transparency: reduce) {
+  [data-glass] {
+    -webkit-backdrop-filter: none;
+            backdrop-filter: none;
+    background: #fff;
+  }
+}
