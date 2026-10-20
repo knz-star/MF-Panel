@@ -9,7 +9,7 @@ import { LandingPage } from '../features/landing/LandingPage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { SignupPage } from '../features/auth/SignupPage';
 import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage';
-import { TeamSelectionPage } from '../features/auth/TeamSelectionPage';
+import { PendingApprovalPage } from '../features/auth/PendingApprovalPage';
 import { PledgePage } from '../features/auth/PledgePage';
 import { AdminLinksPage } from '../features/admin/AdminLinksPage';
 
@@ -82,8 +82,8 @@ export const router = createBrowserRouter([
     element: <ProtectedRoute><PledgePage /></ProtectedRoute>,
   },
   {
-    path: '/select-team',
-    element: <ProtectedRoute><TeamSelectionPage /></ProtectedRoute>,
+    path: '/pending-approval',
+    element: <ProtectedRoute><PendingApprovalPage /></ProtectedRoute>,
   },
 
   // Dashboard routing is handled before the shell so role-based redirects are explicit.

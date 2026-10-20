@@ -30,7 +30,7 @@ export const PledgePage: React.FC = () => {
       const { error: saveError } = await supabase.from('mfp_documents').update({ data: nextData, updated_at: new Date().toISOString() }).eq('collection_name', 'users').eq('document_id', currentUser.uid);
       if (saveError) throw saveError;
       await refreshProfile();
-      navigate('/select-team', { replace: true });
+      navigate('/dashboard', { replace: true });
     } catch (e) {
       console.error('Pledge submission failed', e);
       setError('عہد نامہ محفوظ نہیں ہو سکا۔ دوبارہ کوشش کریں یا منتظم سے رابطہ کریں۔');

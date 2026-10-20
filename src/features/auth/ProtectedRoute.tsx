@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth, workspaceSelectionKey } from './AuthContext';
+import { useAuth } from './AuthContext';
 import { ModuleKey } from '../../types/user';
 import { ShieldAlert, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -42,19 +42,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/profile" replace />;
   }
 
-  if (!isAdmin && userProfile?.accountStatus === 'PENDING' && location.pathname !== '/pledge' && location.pathname !== '/select-team') {
-    return <Navigate to={userProfile.pledgeAccepted ? '/select-team' : '/pledge'} replace />;
+  if (!isAdmin && !isTeamAdmin && !userProfile?.pledgeAccepted && location.pathname !== '/pledge') {
+    return <Navigate to="/pledge" replace />;
   }
 
-  const assignedTeams = (userProfile?.allowedModules ?? []).filter((m) => ['searching','checking','reports','evidence'].includes(m));
-  let workspaceChosen = false;
-  try { workspaceChosen = !!currentUser && sessionStorage.getItem(workspaceSelectionKey(currentUser.uid)) === 'true'; } catch {}
-  if (!isAdmin && assignedTeams.length > 1 && !workspaceChosen && location.pathname !== '/select-team' && location.pathname !== '/pledge') {
-    return <Navigate to="/select-team" replace state={{ from: location }} />;
-  }
-
-  if (!isAdmin && location.pathname !== '/select-team' && location.pathname !== '/pledge' && (!userProfile || userProfile.teamConfirmed !== true || !(userProfile.allowedModules ?? []).some((m) => ['searching','checking','reports','evidence'].includes(m)))) {
-    return <Navigate to="/select-team" replace />;
+  const hasAssignedTeam = !!userProfile?.team && (userProfile.allowedModules ?? []).includes(userProfile.team) && userProfile.teamConfirmed === true;
+  if (!isAdmin && (!userProfile || userProfile.accountStatus !== 'ACTIVE' || !hasAssignedTeam) && location.pathname !== '/pledge' && location.pathname !== '/pending-approval') {
+    return <Navigate to="/pending-approval" replace />;
   }
 
   if (requireAdmin && !isAdmin && !(isTeamAdmin && location.pathname === '/admin/analytics')) {
@@ -78,10 +72,6 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         </div>
       </div>
     );
-  }
-
-  if (requiredModule && !isAdmin && userProfile?.team !== requiredModule && (userProfile?.allowedModules ?? []).includes(requiredModule)) {
-    return <Navigate to="/select-team" replace state={{ requestedTeam: requiredModule }} />;
   }
 
   if (requiredModule && !hasModuleAccess(requiredModule)) {

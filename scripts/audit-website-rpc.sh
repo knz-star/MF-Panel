@@ -10,8 +10,8 @@ if ! grep -q "mfp_web_api" supabase/migrations/20261020133000_mfp_web_rpc_replac
   echo "FAIL: database RPC replacement migration is missing." >&2
   exit 1
 fi
-if ! grep -q "mfp_select_team" supabase/migrations/20261020133000_mfp_web_rpc_replacements.sql; then
-  echo "FAIL: secure team-switch RPC is missing." >&2
+if grep -R -n "mfp_select_team\|selectTeam\|/select-team\|TeamSelectionPage" src --exclude-dir=tests; then
+  echo "Obsolete team-selection flow remains in website source" >&2
   exit 1
 fi
 MIGRATION="supabase/migrations/20261020133000_mfp_web_rpc_replacements.sql"

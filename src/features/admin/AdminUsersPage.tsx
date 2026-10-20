@@ -12,14 +12,14 @@ import {
 } from 'lucide-react';
 import { listAllUsers, updateUserRoleAndModules } from '../../services/userService';
 import { useAuth } from '../auth/AuthContext';
-import { UserProfile, UserRole, ModuleKey, AccountStatus } from '../../types/user';
+import { UserProfile, UserRole, AccountStatus, TeamKey } from '../../types/user';
 
 export const AdminUsersPage: React.FC = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [selectedRole, setSelectedRole] = useState<UserRole>('USER');
-  const [selectedModules, setSelectedModules] = useState<ModuleKey[]>([]);
+  const [selectedTeam, setSelectedTeam] = useState<TeamKey | ''>('');
   const [selectedStatus, setSelectedStatus] = useState<AccountStatus>('PENDING');
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -45,16 +45,14 @@ export const AdminUsersPage: React.FC = () => {
   const handleStartEdit = (user: UserProfile) => {
     setEditingUser(user);
     setSelectedRole(user.role);
-    setSelectedModules(user.allowedModules || []);
+    const teamOptions: TeamKey[] = ['searching','checking','reports','evidence'];
+    setSelectedTeam(user.role === 'ADMIN' ? '' : (user.team && teamOptions.includes(user.team) ? user.team : (user.allowedModules ?? []).find((m): m is TeamKey => teamOptions.includes(m as TeamKey)) ?? ''));
     setSelectedStatus(user.accountStatus || 'PENDING');
     setMessage(null);
   };
 
-  const handleToggleModule = (mod: ModuleKey) => {
-    setSelectedModules((prev) =>
-      prev.includes(mod) ? prev.filter((m) => m !== mod) : [...prev, mod]
-    );
-  };
+  const handleRoleChange = (role: UserRole) => { setSelectedRole(role); };
+  const handleTeamChange = (team: TeamKey | '') => { setSelectedTeam(team); };
 
   const handleSave = async () => {
     if (!editingUser) return;
@@ -65,7 +63,7 @@ export const AdminUsersPage: React.FC = () => {
       await updateUserRoleAndModules({
         targetUid: editingUser.uid,
         role: selectedRole,
-        allowedModules: selectedModules,
+        allowedModules: selectedRole === 'ADMIN' ? ['searching','checking','reports','evidence','admin'] : (selectedTeam ? [selectedTeam] : []),
         accountStatus: selectedStatus,
         adminUid: currentUser?.uid || 'ADMIN',
       });
@@ -92,7 +90,7 @@ export const AdminUsersPage: React.FC = () => {
             User & Role Management
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Review accounts, approve or keep pending, and grant access to one or more workspaces.
+            Review accounts, approve or keep pending, and assign each standard user to one team.
           </p>
         </div>
         <button
@@ -172,12 +170,13 @@ export const AdminUsersPage: React.FC = () => {
               <label className="block text-slate-700 font-semibold mb-1">Assigned Role</label>
               <select
                 value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value as UserRole)}
+                onChange={(e) => handleRoleChange(e.target.value as UserRole)}
                 className="w-full p-2 border border-slate-300 rounded-lg bg-white"
               >
                 <option value="USER">USER (Standard Member)</option>
                 <option value="SEARCHER">SEARCHER (Searching Team)</option>
                 <option value="CHECKER">CHECKER (Checking Team)</option>
+                {editingUser?.role === 'TEAM_ADMIN' && <option value="TEAM_ADMIN">TEAM_ADMIN (managed in Team Analytics)</option>}
                 <option value="ADMIN">ADMIN (Full Administrative Control)</option>
               </select>
             </div>
@@ -197,29 +196,8 @@ export const AdminUsersPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-2">
-              Authorized Workspace Access
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-              {(['searching', 'checking', 'reports', 'evidence', 'admin'] as ModuleKey[]).map((m) => (
-                <label
-                  key={m}
-                  className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-colors ${
-                    selectedModules.includes(m)
-                      ? 'bg-blue-50 border-blue-300 text-blue-950 font-semibold'
-                      : 'bg-slate-50 border-slate-200 text-slate-600'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedModules.includes(m)}
-                    onChange={() => handleToggleModule(m)}
-                    className="rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
-                  />
-                  <span className="capitalize">{m}</span>
-                </label>
-              ))}
-            </div>
+            <label className="block text-xs font-semibold text-slate-700 mb-2">Assigned Team</label>
+            {selectedRole === 'ADMIN' ? <div className="rounded-xl border border-rose-100 bg-rose-50 p-3 text-xs leading-5 text-rose-800">Senior administrators have full access to all teams and administration features.</div> : <><select value={selectedTeam} disabled={selectedRole === 'TEAM_ADMIN'} onChange={(e) => handleTeamChange(e.target.value as TeamKey | '')} className="w-full rounded-xl border border-slate-300 bg-white p-3 text-sm"><option value="">No team assigned</option><option value="searching">Searching Team</option><option value="checking">Checking Team</option><option value="reports">Workspace Reports</option><option value="evidence">Evidence Team</option></select><p className="mt-2 text-[11px] leading-5 text-slate-500">Each standard user receives one team. The user cannot select or switch teams; their assigned workspace opens automatically after approval. Team administrators are managed from Team Analytics.</p></>}
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-2">
@@ -269,7 +247,7 @@ export const AdminUsersPage: React.FC = () => {
                   <th className="py-3 px-4">Email</th>
                   <th className="py-3 px-4">Gender Group</th>
                   <th className="py-3 px-4">Role</th>
-                  <th className="py-3 px-4">Authorized Teams (all)</th>
+                  <th className="py-3 px-4">Assigned Team</th>
                   <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
@@ -298,19 +276,7 @@ export const AdminUsersPage: React.FC = () => {
                         {u.role}
                       </span>
                     </td>
-                    <td className="py-3 px-4">
-                      <div className="flex min-w-[180px] flex-wrap gap-1">
-                        {u.allowedModules?.filter(m => ['searching','checking','reports','evidence'].includes(m)).map((m) => (
-                          <span
-                            key={m}
-                            className={`text-[10px] px-2 py-1 rounded-full font-semibold ${m === 'searching' ? 'bg-blue-50 text-blue-700' : m === 'checking' ? 'bg-violet-50 text-violet-700' : m === 'reports' ? 'bg-amber-50 text-amber-800' : 'bg-emerald-50 text-emerald-700'}`}
-                          >
-                            {m}
-                          </span>
-                        ))}
-                        {!(u.allowedModules ?? []).some(m => ['searching','checking','reports','evidence'].includes(m)) && <span className="text-[10px] text-amber-700">No team assigned</span>}
-                      </div>
-                    </td>
+                    <td className="py-3 px-4">{u.role === 'ADMIN' ? <span className="rounded-full bg-rose-50 px-2 py-1 text-[10px] font-semibold text-rose-700">All teams</span> : u.team ? <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${u.team === 'searching' ? 'bg-blue-50 text-blue-700' : u.team === 'checking' ? 'bg-violet-50 text-violet-700' : u.team === 'reports' ? 'bg-amber-50 text-amber-800' : 'bg-emerald-50 text-emerald-700'}`}>{u.team}</span> : <span className="text-[10px] text-amber-700">Not assigned</span>}</td>
                     <td className="py-3 px-4">
                       <span
                         className={`text-[10px] font-semibold ${

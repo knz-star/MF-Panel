@@ -108,22 +108,6 @@ export async function createInitialUserProfile(
   return userProfile;
 }
 
-export async function assignUserTeam(uid: string, email: string, displayName: string, team: TeamKey): Promise<UserProfile> {
-  const { data: authData } = await supabase.auth.getUser();
-  if (!authData.user || authData.user.id !== uid) throw new Error('Authentication required for team selection.');
-  const { data, error } = await supabase.rpc('mfp_assign_team', { p_team: team });
-  if (error) throw error;
-  const row = data as Record<string, any>;
-  const updated: UserProfile = {
-    uid, email: row.email ?? email.toLowerCase().trim(), displayName: row.displayName ?? displayName,
-    role: row.role ?? 'USER', team: row.team ?? team, allowedModules: row.allowedModules ?? [team],
-    teamConfirmed: row.teamConfirmed ?? true, accountStatus: row.accountStatus ?? 'ACTIVE',
-    updatedAt: row.updatedAt ?? new Date().toISOString(),
-  };
-  localStore.upsertUser(updated);
-  return updated;
-}
-
 export async function ensureAdminProfile(uid: string, email: string, displayName: string): Promise<UserProfile> {
   const now = new Date().toISOString();
   const profile: UserProfile = {
@@ -158,17 +142,16 @@ export async function updateUserRoleAndModules(params: {
   const allUsers = localStore.getUsers();
   const existing = allUsers.find((u) => u.uid === params.targetUid);
   const teamModules: TeamKey[] = ['searching', 'checking', 'reports', 'evidence'];
-  const safeModules: ModuleKey[] = params.role === 'ADMIN'
-    ? ['searching', 'checking', 'reports', 'evidence', 'admin']
-    : [...new Set(params.allowedModules.filter((module): module is TeamKey => teamModules.includes(module as TeamKey)))];
-  const singleTeam: TeamKey | undefined = safeModules.find((module): module is TeamKey => teamModules.includes(module as TeamKey));
+  const requestedTeam = params.allowedModules.find((module): module is TeamKey => teamModules.includes(module as TeamKey));
+  const safeModules: ModuleKey[] = params.role === 'ADMIN' ? ['searching', 'checking', 'reports', 'evidence', 'admin'] : (requestedTeam ? [requestedTeam] : []);
+  const singleTeam: TeamKey | undefined = params.role === 'ADMIN' ? undefined : requestedTeam;
 
   if (existing) {
     existing.role = params.role;
     existing.team = singleTeam;
     existing.allowedModules = safeModules;
     existing.accountStatus = params.accountStatus;
-    existing.teamConfirmed = params.accountStatus === 'ACTIVE' && safeModules.length > 0;
+    existing.teamConfirmed = params.role === 'ADMIN' || (params.accountStatus === 'ACTIVE' && !!singleTeam);
     existing.updatedAt = new Date().toISOString();
     localStore.upsertUser(existing);
   }
@@ -180,7 +163,7 @@ export async function updateUserRoleAndModules(params: {
     role: params.role,
     account_status: params.accountStatus,
     team_key: singleTeam ?? null,
-    team_confirmed: params.accountStatus === 'ACTIVE' && safeModules.some(m => teamModules.includes(m as TeamKey)),
+    team_confirmed: params.role === 'ADMIN' || (params.accountStatus === 'ACTIVE' && !!singleTeam),
     allowed_modules: safeModules,
     updated_at: now,
   }).eq('user_id', params.targetUid);
@@ -192,7 +175,7 @@ export async function updateUserRoleAndModules(params: {
       team: singleTeam ?? null,
       allowedModules: safeModules,
       accountStatus: params.accountStatus,
-      teamConfirmed: params.accountStatus === 'ACTIVE' && safeModules.length > 0,
+      teamConfirmed: params.role === 'ADMIN' || (params.accountStatus === 'ACTIVE' && !!singleTeam),
       updatedAt: now,
     }), 5000, undefined);
   } catch (err) {

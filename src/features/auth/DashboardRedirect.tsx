@@ -8,10 +8,11 @@ export const DashboardRedirect: React.FC = () => {
   if (isAdmin) return <Navigate to="/admin" replace />;
   if (isTeamAdmin) return <Navigate to="/admin/analytics" replace />;
   if (userProfile && !userProfile.pledgeAccepted) return <Navigate to="/pledge" replace />;
-  if (userProfile?.accountStatus === 'PENDING') return <Navigate to="/select-team" replace />;
-  const assigned = (userProfile?.allowedModules ?? []).filter((m) => ['searching','checking','reports','evidence'].includes(m));
-  if (assigned.length === 0) return <Navigate to="/select-team" replace />;
-  if (assigned.length > 1 || userProfile?.team !== assigned[0]) return <Navigate to="/select-team" replace />;
-  if (assigned[0] === 'evidence') return <Navigate to="/dashboard/evidence-linking" replace />;
-  return <Navigate to={`/${assigned[0]}`} replace />;
+  if (userProfile?.accountStatus !== 'ACTIVE') return <Navigate to="/pending-approval" replace />;
+  const allowed = (userProfile?.allowedModules ?? []).filter((m) => ['searching','checking','reports','evidence'].includes(m));
+  const team = userProfile?.team;
+  if (!team || !allowed.includes(team) || userProfile?.teamConfirmed !== true) return <Navigate to="/pending-approval" replace />;
+  if (team === 'evidence') return <Navigate to="/dashboard/evidence-linking" replace />;
+  if (team === 'reports') return <Navigate to="/workspace/reports" replace />;
+  return <Navigate to={`/${team}`} replace />;
 };

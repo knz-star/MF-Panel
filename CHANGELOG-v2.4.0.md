@@ -7,4 +7,4 @@
 - Existing data was not deleted. No Android application source was modified.
 
 ## Deployment note
-Deploy the included `mfp-evidence-performance` Edge Function and apply `supabase/migrations/20261018050000_mfp_evidence_performance_recovery.sql`. Analytics only reports activity that has actually been synced; it does not fabricate historic screenshots or app-local files.
+Deploy the included `mfp-evidence-performance` Edge Function and apply `supabase/migrations/20261018050100_mfp_evidence_performance_recovery.sql`. Analytics only reports activity that has actually been synced; it does not fabricate historic screenshots or app-local files.
