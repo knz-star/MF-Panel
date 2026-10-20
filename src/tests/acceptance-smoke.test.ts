@@ -11,12 +11,15 @@ assert.match(router,/dashboard\/evidence-linking/,'Evidence linking route exists
 assert.match(router,/requiredModule="evidence"/,'Evidence linking is protected by Evidence module');
 assert.match(profile,/verifying persisted value/,'Profile save verifies persisted data after failure');
 assert.match(appLayout,/Checking Workspace/,'Checking workspace label is distinct');
-assert.match(appLayout,/selectTeam\(next\)/,'Workspace switch persists the selected team');
+assert.doesNotMatch(appLayout,/Switch workspace|selectTeam/,'Workspace switching is removed');
+assert.doesNotMatch(router,/select-team|TeamSelectionPage/,'Team selection route is removed');
+assert.match(router,/pending-approval/,'Pending approval route exists');
 assert.match(router,/dashboard\/evidence-linking/,'Evidence pairing route remains available');
 assert.match(router,/path: '\/reports'[\s\S]*?ProtectedRoute requireAdmin/,'Report Generator is admin-only');
 assert.doesNotMatch(appLayout,/Reports Workspace|New report/,'Non-admin navigation must not expose report generation');
 assert.match(edge,/supabase\.rpc\('mfp_web_api'/,'Website API uses authenticated database RPC');
 assert.doesNotMatch(edge,/functions\.invoke/,'Website must not invoke Edge Functions');
-assert.match(health,/mfp_web_api|mfp-select-team|mfp_select_team/,'System Health checks database RPCs');
+assert.match(health,/mfp_web_api/,'System Health checks the website RPC dispatcher');
+assert.doesNotMatch(health,/mfp_select_team/,'System Health does not depend on removed team selection RPC');
 assert.match(reports,/jobId=/,'Report jobs open a job-specific analysis route');
 console.log('PASS: MF MPanel acceptance source smoke tests');

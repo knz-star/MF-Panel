@@ -12,7 +12,7 @@ export interface UserProfile {
   role: UserRole;
   allowedModules: ModuleKey[];
   team?: TeamKey;
-  /** True only after the signed-in user completes the post-login team selection. */
+  /** True only after Admin approves the account and assigns its primary team. */
   teamConfirmed?: boolean;
   accountStatus: AccountStatus;
   createdAt?: string;

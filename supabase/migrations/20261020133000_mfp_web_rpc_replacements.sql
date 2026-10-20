@@ -7,27 +7,34 @@ grant usage on schema mfp_private to authenticated;
 create table if not exists mfp_private.mfp_export_settings (setting_key text primary key, setting_value jsonb not null default '{}'::jsonb, updated_by uuid references auth.users(id) on delete set null, updated_at timestamptz not null default now());
 alter table mfp_private.mfp_export_settings enable row level security;
 revoke all on mfp_private.mfp_export_settings from public, anon, authenticated;
--- The unchanged Android app still uses its existing pairing endpoint for redemption;
--- this migration removes Edge Function dependency from the website frontend.
-create or replace function public.mfp_select_team(p_team text)
-returns jsonb
-language plpgsql security definer set search_path=public,auth,pg_temp as $$
-declare p public.mfp_user_profiles%rowtype;
+-- Team selection is intentionally not part of the website flow. Remove any legacy
+-- selector RPC if a previous manual SQL run created it. Admin assigns one canonical team_key.
+drop function if exists public.mfp_select_team(text);
+
+-- New signups must wait for an explicit Admin team assignment and approval.
+create or replace function public.mfp_ensure_profile()
+returns jsonb language plpgsql security definer set search_path=public,auth,pg_temp as $$
+declare uid uuid := auth.uid(); u auth.users%rowtype; p public.mfp_user_profiles%rowtype;
 begin
-  if auth.uid() is null then raise exception 'Authentication required'; end if;
-  if p_team not in ('searching','checking','reports','evidence') then raise exception 'Invalid team'; end if;
-  select * into p from public.mfp_user_profiles where user_id=auth.uid() for update;
-  if not found or p.account_status <> 'ACTIVE' or not p.team_confirmed then raise exception 'Active team assignment required'; end if;
-  if p.role <> 'ADMIN' and not (p_team = any(coalesce(p.allowed_modules,'{}'::text[]))) then raise exception 'This team is not assigned to your account'; end if;
-  if p.role <> 'ADMIN' then
-    update public.mfp_user_profiles set team_key=p_team, updated_at=now() where user_id=auth.uid() returning * into p;
-    update public.mfp_documents set data=data || jsonb_build_object('team',p_team,'teamConfirmed',true,'allowedModules',to_jsonb(p.allowed_modules)), team_key=p_team, updated_at=now()
-      where collection_name='users' and document_id=auth.uid()::text;
-  end if;
-  return jsonb_build_object('user_id',p.user_id,'team_key',p.team_key,'allowed_modules',p.allowed_modules,'team_confirmed',p.team_confirmed,'account_status',p.account_status);
-end $$;
-revoke all on function public.mfp_select_team(text) from public,anon;
-grant execute on function public.mfp_select_team(text) to authenticated;
+  if uid is null then raise exception 'Authentication required'; end if;
+  select * into u from auth.users where id=uid;
+  if not found then raise exception 'Authenticated user record missing'; end if;
+  insert into public.mfp_user_profiles(user_id,email,display_name,role,account_status,team_confirmed,allowed_modules)
+    values(uid,u.email,coalesce(u.raw_user_meta_data->>'full_name',split_part(coalesce(u.email,'user'),'@',1)),'USER','PENDING',false,'{}'::text[])
+    on conflict(user_id) do nothing;
+  select * into p from public.mfp_user_profiles where user_id=uid;
+  return jsonb_build_object('user_id',p.user_id,'email',p.email,'display_name',p.display_name,'role',p.role,'account_status',p.account_status,'team_key',p.team_key,'team_confirmed',p.team_confirmed,'allowed_modules',p.allowed_modules);
+end; $$;
+revoke all on function public.mfp_ensure_profile() from public,anon;
+grant execute on function public.mfp_ensure_profile() to authenticated;
+
+-- Old standard accounts with no team are not allowed into any workspace until Admin review.
+update public.mfp_user_profiles
+set account_status='PENDING', team_confirmed=false, allowed_modules='{}'::text[], updated_at=now()
+where role in ('USER','SEARCHER','CHECKER')
+  and team_key is null
+  and coalesce(cardinality(allowed_modules),0)=0
+  and account_status='ACTIVE';
 
 create or replace function public.mfp_web_api(p_service text, p_payload jsonb default '{}'::jsonb)
 returns jsonb language plpgsql security definer set search_path=public,auth,pg_temp as $$
@@ -41,7 +48,8 @@ begin
   select * into p from public.mfp_user_profiles where user_id=uid;
   if not found or p.account_status <> 'ACTIVE' then raise exception 'Active MF MPanel account required'; end if;
   admin_ok := p.role='ADMIN'; v_team := coalesce(p.team_key,'');
-  team_ok := admin_ok or (p.team_confirmed and v_team = any(coalesce(p.allowed_modules,'{}'::text[])));
+  team_ok := admin_ok or (p.team_confirmed and v_team in ('searching','checking','reports','evidence') and v_team = any(coalesce(p.allowed_modules,'{}'::text[])));
+  if not admin_ok and not team_ok then raise exception 'Active account with one valid Admin-assigned team is required'; end if;
 
   -- Evidence linking: all website actions are direct RPCs; Android redemption remains compatible with its existing endpoint.
   if p_service in ('mfp-evidence-linking','evidence-linking') then
@@ -278,9 +286,9 @@ begin
           'activity',(select count(*) from public.mfp_documents d where d.owner_uid=up.user_id and d.collection_name in ('profiles','posts','checkingRecords','workflowEvents'))+(select count(*) from public.mfp_evidence_activity_events e where e.user_id=up.user_id),
           'score',case when ((select count(*) from public.mfp_checking_assignments ca where ca.checker_id=up.user_id and ca.status='VERIFIED')+(select count(*) from public.mfp_checking_assignments ca where ca.checker_id=up.user_id and ca.status in ('BLOCKED','INVALID')))=0 then null else round(100.0*(select count(*) from public.mfp_checking_assignments ca where ca.checker_id=up.user_id and ca.status='VERIFIED')/greatest(1,(select count(*) from public.mfp_checking_assignments ca where ca.checker_id=up.user_id and ca.status='VERIFIED')+(select count(*) from public.mfp_checking_assignments ca where ca.checker_id=up.user_id and ca.status in ('BLOCKED','INVALID'))),1) end,
           'daily','[]'::jsonb,'lowScorePending',exists(select 1 from public.mfp_team_score_warnings w where w.user_id=up.user_id and w.status='PENDING_REVIEW')
-        )) from public.mfp_user_profiles up where admin_ok or (p.role='TEAM_ADMIN' and up.team_key=v_team) or up.user_id=uid),'[]'::jsonb),
-        'trendWarnings',coalesce((select jsonb_agg(jsonb_build_object('team',team_key,'createdAt',created_at,'scores',recent_scores)) from public.mfp_team_trend_alerts where admin_ok or team_key=v_team),'[]'::jsonb),
-        'warnings',coalesce((select jsonb_agg(jsonb_build_object('id',w.id,'userId',w.user_id,'name',coalesce(up.display_name,up.email),'team',w.team_key,'score',w.score,'createdAt',w.created_at,'status',w.status)) from public.mfp_team_score_warnings w join public.mfp_user_profiles up on up.user_id=w.user_id where w.status='PENDING_REVIEW' and (admin_ok or w.team_key=v_team)),'[]'::jsonb),
+        )) from public.mfp_user_profiles up where (action='getAnalytics' and admin_ok) or (action='getAnalytics' and p.role='TEAM_ADMIN' and up.team_key=v_team) or up.user_id=uid),'[]'::jsonb),
+        'trendWarnings',coalesce((select jsonb_agg(jsonb_build_object('team',team_key,'createdAt',created_at,'scores',recent_scores)) from public.mfp_team_trend_alerts where action='getAnalytics' and (admin_ok or team_key=v_team)),'[]'::jsonb),
+        'warnings',coalesce((select jsonb_agg(jsonb_build_object('id',w.id,'userId',w.user_id,'name',coalesce(up.display_name,up.email),'team',w.team_key,'score',w.score,'createdAt',w.created_at,'status',w.status)) from public.mfp_team_score_warnings w join public.mfp_user_profiles up on up.user_id=w.user_id where w.status='PENDING_REVIEW' and ((action='getAnalytics' and (admin_ok or w.team_key=v_team)) or w.user_id=uid)),'[]'::jsonb),
         'admins',coalesce((select jsonb_agg(jsonb_build_object('userId',user_id,'name',display_name,'email',email)) from public.mfp_user_profiles where role in ('ADMIN','TEAM_ADMIN') and account_status='ACTIVE' and (admin_ok or user_id=(select admin_user_id from public.mfp_team_admin_assignments where team_key=v_team))),'[]'::jsonb),
         'userId',uid,'name',p.display_name,'team',p.team_key,'score',null,'scoreStatus','NO_OUTCOMES','accountStatus',p.account_status,'activity',0,'completed',0,'failed',0,'daily','[]'::jsonb,'days',coalesce((p_payload->>'days')::integer,7)) into v;
       return v;
