@@ -10,7 +10,8 @@ export const DashboardRedirect: React.FC = () => {
   if (userProfile && !userProfile.pledgeAccepted) return <Navigate to="/pledge" replace />;
   if (userProfile?.accountStatus === 'PENDING') return <Navigate to="/select-team" replace />;
   const assigned = (userProfile?.allowedModules ?? []).filter((m) => ['searching','checking','reports','evidence'].includes(m));
-  if (assigned.length !== 1) return <Navigate to="/select-team" replace />;
-  if (assigned[0] === 'evidence') return <Navigate to="/dashboard/evidence-performance" replace />;
+  if (assigned.length === 0) return <Navigate to="/select-team" replace />;
+  if (assigned.length > 1 || userProfile?.team !== assigned[0]) return <Navigate to="/select-team" replace />;
+  if (assigned[0] === 'evidence') return <Navigate to="/dashboard/evidence-linking" replace />;
   return <Navigate to={`/${assigned[0]}`} replace />;
 };

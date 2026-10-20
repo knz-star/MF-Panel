@@ -53,7 +53,7 @@ export const EvidencePerformanceDashboard: React.FC = () => {
       <div className="mt-5 flex flex-wrap gap-2">{periods.map(p => <button key={p.value} onClick={() => setPeriod(p.value)} className={`rounded-xl px-4 py-2 text-xs font-semibold transition ${period === p.value ? 'bg-emerald-300 text-slate-950' : 'border border-white/15 text-slate-300 hover:bg-white/10'}`}>{p.label}</button>)}</div>
     </section>
 
-    {error && <div role="alert" className="flex gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800"><AlertTriangle className="mt-0.5 h-5 w-5 shrink-0"/><div><p className="font-bold">Analytics could not load</p><p className="mt-1">{error}</p><p className="mt-2 text-xs">Confirm that the Evidence performance migration and `mfp-evidence-performance` Edge Function are deployed.</p></div></div>}
+    {error && <div role="alert" className="flex gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800"><AlertTriangle className="mt-0.5 h-5 w-5 shrink-0"/><div><p className="font-bold">Analytics could not load</p><p className="mt-1">{error}</p><p className="mt-2 text-xs">Confirm that the Evidence performance migration and `mfp-evidence-performance` database operation are deployed.</p></div></div>}
 
     <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
       <Metric icon={Link2} label="Total assigned" value={loading ? '—' : mine?.activeAssigned ?? 0} hint="Currently assigned to you" tone="blue"/>

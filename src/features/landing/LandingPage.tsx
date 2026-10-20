@@ -548,6 +548,7 @@ export const LandingPage: React.FC = () => {
   const [info, setInfo] = useState<{ title: string; body: string } | null>(null);
 
   const signedIn = !!user;
+  useEffect(() => { if (!authLoading && signedIn) navigate('/dashboard', { replace: true }); }, [authLoading, signedIn, navigate]);
   const contactTarget =
     settings.contactUrl ?? (settings.contactEmail ? `mailto:${settings.contactEmail}` : undefined);
 
@@ -709,7 +710,7 @@ export const LandingPage: React.FC = () => {
                 </p>
                 <ul className="mt-6 space-y-3 text-[13px] text-slate-300">
                   {[
-                    'One shared Supabase backend: Auth, PostgreSQL, Realtime, Storage, and Edge Functions.',
+                    'One shared Supabase backend: Auth, PostgreSQL, Realtime, Storage, and database operations.',
                     'Clear data contracts for future Evidence Android capture integration.',
                     'Role- and team-based access rules protect records and audit events.',
                   ].map((t) => (

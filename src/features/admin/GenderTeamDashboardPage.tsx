@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Activity, Download, RefreshCw, ShieldCheck, Users, Link2, AlertTriangle } from 'lucide-react';
+import { invokeWebsiteApi } from '../../services/webApiClient';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../auth/AuthContext';
 
@@ -23,8 +24,7 @@ export const GenderTeamDashboardPage: React.FC = () => {
   const refresh = useCallback(async () => {
     setBusy(true); setError('');
     try {
-      const { data, error: invokeError } = await supabase.functions.invoke('mfp-gender-team-admin', { body: { action: 'get', genderGroup: group } });
-      if (invokeError) throw invokeError;
+      const data = await invokeWebsiteApi<any>('mfp-gender-team-admin', { action: 'get', genderGroup: group });
       if (!data?.success) throw new Error(data?.error || 'Could not load the gender-group dashboard.');
       setReport(data);
       if (data.genderGroup === 'male' || data.genderGroup === 'female') setGroup(data.genderGroup);
@@ -53,8 +53,7 @@ export const GenderTeamDashboardPage: React.FC = () => {
     if (!adminUserId && !assignments.some((item) => item.gender_group === genderGroup)) { setError('Select an active Team Admin first.'); return; }
     setAssigning(genderGroup); setError(''); setNotice('');
     try {
-      const { data, error: invokeError } = await supabase.functions.invoke('mfp-gender-team-admin', { body: { action: 'assign', genderGroup, adminUserId } });
-      if (invokeError) throw invokeError;
+      const data = await invokeWebsiteApi<any>('mfp-gender-team-admin', { action: 'assign', genderGroup, adminUserId });
       if (!data?.success) throw new Error(data?.error || 'Could not assign gender-team lead.');
       setNotice(data.removed ? `${genderGroup === 'male' ? 'Male' : 'Female'} Team lead removed.` : `${genderGroup === 'male' ? 'Male' : 'Female'} Team lead assigned: ${data.adminName || adminUserId}`);
       await refresh();
