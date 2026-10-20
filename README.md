@@ -1,4 +1,4 @@
-# MF MPanel 2.14.1
+# MF MPanel 2.14.2
 
 A single frontend + backend setup:
 
@@ -34,7 +34,7 @@ npm run build
 
 ## Release status
 
-This is a **simplified QA candidate**, not yet production-approved. Dependency-backed lint/build and PostgreSQL migration execution still need to pass in an environment with package registry access and an isolated database. Do not apply the listed migrations blindly to production. Follow `DEPLOYMENT-v2.14.0-SINGLE-TEAM-ASSIGNMENT.md` for the exact migration list and verification requirements.
+This is a **simplified QA candidate**, not yet production-approved. Dependency-backed lint/build and PostgreSQL migration execution still need to pass in an environment with package registry access and an isolated database. Do not apply the listed migrations blindly to production. Follow `docs/DEPLOYMENT.md` for the exact migration list and verification requirements.
 
 ## Core workflow
 
@@ -46,4 +46,5 @@ Admin approves a user and assigns one team. Users cannot choose or switch teams;
 - `src/lib/supabase.ts` — public Supabase client configuration.
 - `src/services/webApiClient.ts` — authenticated RPC client.
 - `supabase/migrations/` — backend schema and security changes.
-- `docs/archive/` — historical reports retained for reference; not required for setup.
+- `docs/` — deployment steps, QA blockers, Android notes, optional legacy cleanup SQL.
+- `CHANGELOG.md` — what changed in this release.

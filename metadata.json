@@ -1,15 +1,5 @@
 {
-  "name": "MF MPanel \u2014 Central Workflow Management System",
-  "description": "MF MPanel v2.8.5: separated multi-team workspaces, canonical team authorization, count-only Searching intake, automatic Checking handoff and admin review routing.",
-  "requestFramePermissions": [],
-  "majorCapabilities": [
-    "AUTOMATIC_WORKFLOW_HANDOFF",
-    "SERVER_SIDE_DUPLICATE_REVIEW",
-    "ADMIN_SAFE_RESET",
-    "TEAM_ANALYTICS",
-    "SECURE_EVIDENCE_PAIRING",
-    "SCHEDULED_LOW_SCORE_ENFORCEMENT",
-    "VERIFIED_ADDITIVE_BACKEND_MIGRATIONS",
-    "PRODUCTION_STATUS_REPORT"
-  ]
+  "name": "MF MPanel — Central Workflow Management System",
+  "description": "MF MPanel v2.14.2: Vercel frontend + Supabase backend (RPC + RLS). Single Admin-assigned team per user, count-only Searching intake, automatic Checking handoff, admin review routing.",
+  "requestFramePermissions": []
 }

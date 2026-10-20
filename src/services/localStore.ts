@@ -58,6 +58,10 @@ function writeItem<T>(key: string, value: T): void {
 }
 
 export const localStore = {
+  /** Wipe the browser cache so another account on a shared device never sees previous records. */
+  clearAll: (): void => {
+    try { Object.values(KEYS).forEach((k) => localStorage.removeItem(k)); } catch (e) { console.warn('Could not clear local cache:', e); }
+  },
   getProfiles: (): ProfileRecord[] => readItem<ProfileRecord[]>(KEYS.PROFILES, SEED_PROFILES),
   saveProfiles: (profiles: ProfileRecord[]) => writeItem(KEYS.PROFILES, profiles),
   upsertProfile: (profile: ProfileRecord): ProfileRecord => {

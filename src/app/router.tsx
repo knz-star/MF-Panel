@@ -13,8 +13,6 @@ import { PendingApprovalPage } from '../features/auth/PendingApprovalPage';
 import { PledgePage } from '../features/auth/PledgePage';
 import { AdminLinksPage } from '../features/admin/AdminLinksPage';
 
-// User Dashboard
-
 // Searching Team
 import { SearchingDashboard } from '../features/searching/SearchingDashboard';
 import { SearchingImportPage } from '../features/searching/SearchingImportPage';
@@ -25,10 +23,7 @@ import { SearchingHandoffPage } from '../features/searching/SearchingHandoffPage
 
 // Checking Team
 import { CheckingDashboard } from '../features/checking/CheckingDashboard';
-import { CheckingQueuePage } from '../features/checking/CheckingQueuePage';
 import { CheckingRecordPage } from '../features/checking/CheckingRecordPage';
-import { CheckingVerifiedPage } from '../features/checking/CheckingVerifiedPage';
-import { CheckingFailedPage } from '../features/checking/CheckingFailedPage';
 
 // Report Generator
 import { ReportsDashboard } from '../features/reports/ReportsDashboard';
@@ -48,11 +43,8 @@ import { AdminEvidenceOperationsPage } from '../features/admin/AdminEvidenceOper
 import { WorkflowHistoryPage } from '../features/workflow/WorkflowHistoryPage';
 import { SettingsPage } from '../features/settings/SettingsPage';
 import { EvidenceLinkingPage } from '../features/settings/EvidenceLinkingPage';
-import { GetEvidenceLinksPage } from '../features/settings/GetEvidenceLinksPage';
 import { AssignLinksPage } from '../features/settings/AssignLinksPage';
 import { AdminCheckingResultsPage } from '../features/admin/AdminCheckingResultsPage';
-import { EvidencePerformanceDashboard } from '../features/dashboard/EvidencePerformanceDashboard';
-import { EvidenceAssignmentQueuePage } from '../features/dashboard/EvidenceAssignmentQueuePage';
 import { NotFoundPage } from '../features/auth/NotFoundPage';
 import { ProfilePage } from '../features/profile/ProfilePage';
 import { AdminTeamAnalyticsPage } from '../features/admin/AdminTeamAnalyticsPage';

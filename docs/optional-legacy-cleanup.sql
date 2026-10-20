@@ -1,0 +1,13 @@
+-- OPTIONAL, MANUAL, DESTRUCTIVE. Not a migration; never auto-applied.
+-- The live Supabase project is shared with an older "MF Links Panel" app, so review each table first.
+-- These tables exist live but are referenced by NOTHING in the MF MPanel website source:
+--   mfp_web_profiles (1 row), mfp_web_settings (1 row), mfp_web_teams, mfp_web_team_members,
+--   mfp_web_audit_logs, mfp_web_workflows, app_registrations_legacy_backup, evidence_items, pairing_codes (2 rows)
+-- (mfp_web_notifications IS used — keep it.)
+-- 1. Take a backup / Supabase branch.  2. Confirm no other app or the Android app reads them.  3. Then uncomment.
+-- drop table if exists public.mfp_web_profiles, public.mfp_web_settings, public.mfp_web_teams,
+--   public.mfp_web_team_members, public.mfp_web_audit_logs, public.mfp_web_workflows,
+--   public.app_registrations_legacy_backup;
+-- Keep evidence_items / pairing_codes until the Android app's usage is confirmed.
+-- Also review: security-definer view public.app_registrations (Android reads it as anon) and the
+-- public-read policy mf_config_public_read on public.config (legacy Android export setting).

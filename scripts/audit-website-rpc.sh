@@ -29,5 +29,17 @@ if ! grep -Fq "collection_name='profiles' and team_key='searching' and (select m
   echo "FAIL: checking users are not constrained to assigned Searching-team source profiles." >&2
   exit 1
 fi
+if ! grep -q "security definer set search_path=public,extensions,auth,pg_temp" "$MIGRATION"; then
+  echo "FAIL: mfp_web_api search_path must include the extensions schema (pgcrypto digest/gen_random_bytes)." >&2
+  exit 1
+fi
+if grep -q "'zip_password',v->>'zip_password'" "$MIGRATION" || grep -rn "data?.zip_password" src --include=*.tsx >/dev/null; then
+  echo "FAIL: the ZIP export password must never be returned to the browser." >&2
+  exit 1
+fi
+if ! grep -rq "mfp_web_notifications" supabase/migrations/20261020140000_mfp_backend_hardening.sql; then
+  echo "FAIL: mfp_web_notifications table is not created by a migration." >&2
+  exit 1
+fi
 echo "PASS: website uses database RPCs and conflicting legacy RLS policies are removed."
 echo "INFO: mobile-compat/mfp-evidence-linking is reference source for the existing Android bridge only."

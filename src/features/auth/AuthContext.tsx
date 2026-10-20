@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { checkSupabaseConnection, type BackendConnectionStatus } from '../../lib/backend';
 import { type UserProfile, type ModuleKey, type TeamKey } from '../../types/user';
 import { getUserProfile, createInitialUserProfile, ensureAdminProfile, hasAdminRecord } from '../../services/userService';
+import { localStore } from '../../services/localStore';
 
 export interface AuthUser { uid: string; email: string | null; displayName: string | null; emailVerified?: boolean; gender?: 'male' | 'female' }
 interface AuthContextType {
@@ -68,7 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally { setIsLoading(false); }
   };
   const loginWithGoogle = async () => { const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } }); if (error) throw error; };
-  const logout = async () => { const { error } = await supabase.auth.signOut(); if (error) throw error; setCurrentUser(null); setUserProfile(null); };
+  const logout = async () => { const { error } = await supabase.auth.signOut(); if (error) throw error; localStore.clearAll(); setCurrentUser(null); setUserProfile(null); };
   const resetPassword = async (email: string) => { const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), { redirectTo: `${window.location.origin}/login` }); if (error) throw error; };
   const resendConfirmation = async (email: string) => { const { error } = await supabase.auth.resend({ type: 'signup', email: email.trim().toLowerCase(), options: { emailRedirectTo: `${window.location.origin}/login` } }); if (error) throw error; };
   const isAdmin = !!currentUser && userProfile?.role === 'ADMIN' && userProfile.accountStatus === 'ACTIVE';
