@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { auth, db, storage } from '../../lib/backend';
 
-type AssetType = 'logo' | 'partner' | 'client' | 'icon' | 'banner' | 'other';
+type AssetType = 'logo' | 'partner' | 'client' | 'icon' | 'banner' | 'signature' | 'other';
 type AssetRecord = {
   id: string;
   name: string;
@@ -105,7 +105,7 @@ export const AdminAssetsPage: React.FC = () => {
           name: typeof data.name === 'string' ? data.name : '',
           imageUrl: typeof data.imageUrl === 'string' ? data.imageUrl : '',
           altText: typeof data.altText === 'string' ? data.altText : '',
-          assetType: (['logo', 'partner', 'client', 'icon', 'banner', 'other'].includes(data.assetType) ? data.assetType : 'other') as AssetType,
+          assetType: (['logo', 'partner', 'client', 'icon', 'banner', 'signature', 'other'].includes(data.assetType) ? data.assetType : 'other') as AssetType,
           gradientStart: typeof data.gradientStart === 'string' ? data.gradientStart : null,
           gradientEnd: typeof data.gradientEnd === 'string' ? data.gradientEnd : null,
           invertOnHover: data.invertOnHover === true,
@@ -290,7 +290,7 @@ export const AdminAssetsPage: React.FC = () => {
           name: typeof data.name === 'string' ? data.name : '',
           imageUrl: typeof data.imageUrl === 'string' ? data.imageUrl : '',
           altText: typeof data.altText === 'string' ? data.altText : '',
-          assetType: (['logo', 'partner', 'client', 'icon', 'banner', 'other'].includes(data.assetType) ? data.assetType : 'other') as AssetType,
+          assetType: (['logo', 'partner', 'client', 'icon', 'banner', 'signature', 'other'].includes(data.assetType) ? data.assetType : 'other') as AssetType,
           gradientStart: typeof data.gradientStart === 'string' ? data.gradientStart : null,
           gradientEnd: typeof data.gradientEnd === 'string' ? data.gradientEnd : null,
           invertOnHover: data.invertOnHover === true,
@@ -315,7 +315,7 @@ export const AdminAssetsPage: React.FC = () => {
           <Link to="/admin" className="text-xs font-semibold text-slate-500 hover:text-slate-900">← Admin Dashboard</Link>
           <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.18em] text-blue-700">Public site content</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">Landing page assets</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">Manage logos and approved visual assets shown on the public MF MPanel landing page. Changes are saved to Supabase database.</p>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">Manage site visuals and the official signature used on the MF MPanel pledge PDF. Add an active “Official pledge signature” image here to appear on downloaded pledge PDFs. Changes are saved to Supabase database.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button onClick={() => void refreshAssets()} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"><RefreshCw className="h-4 w-4" /> Refresh</button>
@@ -331,7 +331,7 @@ export const AdminAssetsPage: React.FC = () => {
         <div className="flex items-center justify-between gap-3"><h2 className="text-lg font-semibold text-slate-950">{draft.id ? 'Edit asset' : 'Add asset'}</h2><button type="button" onClick={() => setDraft(null)} aria-label="Close editor" className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X className="h-4 w-4" /></button></div>
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block text-sm font-medium text-slate-700">Display name<input required value={draft.name} onChange={(e) => updateDraft('name', e.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal outline-none focus:border-blue-500" placeholder="Partner logo" /></label>
-          <label className="block text-sm font-medium text-slate-700">Asset type<select value={draft.assetType} onChange={(e) => updateDraft('assetType', e.target.value as AssetType)} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-normal"><option value="logo">Logo</option><option value="partner">Partner</option><option value="client">Client</option><option value="icon">Icon</option><option value="banner">Site banner</option><option value="other">Other</option></select></label>
+          <label className="block text-sm font-medium text-slate-700">Asset type<select value={draft.assetType} onChange={(e) => updateDraft('assetType', e.target.value as AssetType)} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-normal"><option value="logo">Logo</option><option value="partner">Partner</option><option value="client">Client</option><option value="icon">Icon</option><option value="banner">Site banner</option><option value="signature">Official pledge signature</option><option value="other">Other</option></select></label>
           <label className="block text-sm font-medium text-slate-700 md:col-span-2">Direct image URL<input value={draft.imageUrl} onChange={(e) => updateDraft('imageUrl', e.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal outline-none focus:border-blue-500" placeholder="https://example.com/logo.svg" /></label>
           <div className="flex flex-wrap items-center gap-2 md:col-span-2"><button type="button" onClick={checkPreview} disabled={!draft.imageUrl.trim()} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 px-3 text-sm font-medium hover:bg-slate-50 disabled:opacity-40"><Eye className="h-4 w-4" /> Validate URL & preview</button><label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-3 text-sm font-medium hover:bg-slate-50"><Upload className="h-4 w-4" /> Upload image (max 5 MB)<input type="file" accept=".svg,.png,.jpg,.jpeg,.webp,.gif,image/svg+xml,image/png,image/jpeg,image/webp,image/gif" className="sr-only" onChange={(e) => chooseFile(e.target.files?.[0] ?? null)} /></label><span className="text-xs text-slate-500">Storage upload requires the mfp-assets bucket and admin Storage policies.</span></div>
           {previewUrl && <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 md:col-span-2"><p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Preview</p><div className="flex min-h-28 items-center justify-center overflow-hidden rounded-lg bg-white p-4"><img src={previewUrl} alt="Selected asset preview" className="max-h-32 max-w-full object-contain" onLoad={() => { if (draft.imageFile) setPreviewOk(true); }} onError={() => { setPreviewOk(false); setPreviewError('Image could not be loaded. Check the URL or select another file.'); }} /></div>{previewError && <p className="mt-2 text-xs text-rose-700">{previewError}</p>}{draft.imageFile && <p className="mt-2 text-xs text-blue-700">Selected: {draft.imageFile.name} ({Math.ceil(draft.imageFile.size / 1024)} KB)</p>}</div>}

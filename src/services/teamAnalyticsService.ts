@@ -1,4 +1,5 @@
 import { invokeWebsiteApi } from './webApiClient';
+import { supabase } from '../lib/supabase';
 
 export type ManagedTeam = 'searching' | 'checking' | 'reports' | 'evidence';
 export interface TeamMemberMetric {
@@ -16,8 +17,8 @@ export interface TeamAnalyticsData {
 async function call<T>(action: string, payload: Record<string, unknown> = {}): Promise<T> {
   return invokeWebsiteApi<T>('mfp-team-analytics', { action, ...payload });
 }
-export const getTeamAnalytics = (days: 7 | 14) => call<TeamAnalyticsData>('getAnalytics', { days });
+export const getTeamAnalytics = async (days: 7 | 14): Promise<TeamAnalyticsData> => { const { data, error } = await supabase.rpc('mfp_team_analytics_data', { p_action: 'getAnalytics', p_days: days }); if (error) throw new Error(error.message); return data as TeamAnalyticsData; };
 export const assignTeamAdmin = (team: ManagedTeam, userId: string | null) => call<{success:boolean}>('assignTeamAdmin', { team, userId });
 export const reviewLowScore = (warningId: string, decision: 'keep' | 'remove') => call<{success:boolean}>('reviewLowScore', { warningId, decision });
 export interface MyTeamScore { userId:string; name:string; team:string; score:number|null; scoreStatus:string; accountStatus:string; activity:number; completed:number; failed:number; daily:Array<{date:string;completed:number;failed:number;activity:number}>; days:number }
-export const getMyTeamScore = (days: 7 | 14) => call<MyTeamScore>('getMyScore', { days });
+export const getMyTeamScore = async (days: 7 | 14): Promise<MyTeamScore> => { const { data, error } = await supabase.rpc('mfp_team_analytics_data', { p_action: 'getMyScore', p_days: days }); if (error) throw new Error(error.message); return data as MyTeamScore; };

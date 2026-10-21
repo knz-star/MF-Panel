@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.14.3 — Pledge PDF, signup review, and team analytics fixes
+
+Fixed
+- Pledge submission now uses the authenticated `mfp_save_pledge` RPC instead of directly updating a legacy document row.
+- Pledge copy downloads as a PDF with the user's typed signature and a separate official-signature area. The active “Official pledge signature” image is managed from Admin → Site Assets.
+- Signup creates a canonical `PENDING` profile in the database, and legacy missing profile rows are safely backfilled as pending rather than granted access.
+- Admin Users uses a protected server-side RPC to list canonical users, including pending accounts.
+- Team analytics reads live server-calculated scores from `mfp_team_analytics_data`; the senior admin is excluded from selectable team-lead options.
+- Admin gender-group views include pending/disabled members for review; non-admin group leads remain scoped to active members.
+
+Validation
+- Changed TypeScript/TSX files passed TypeScript parser syntax checks. A full dependency-backed build could not run in this environment because package installation did not complete.
+
 ## 2.14.2 — Cleanup + backend fixes (from 2.14.1)
 
 Fixed

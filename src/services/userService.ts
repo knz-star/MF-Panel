@@ -60,8 +60,8 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
       createdAt: canonical.created_at ?? legacy.createdAt,
       updatedAt: canonical.updated_at ?? legacy.updatedAt,
       pledgeAccepted: legacy.pledgeAccepted === true || (canonical.preferences && (canonical.preferences.pledgeAccepted === true || canonical.preferences.pledge_accepted === true)),
-      pledgeSignature: legacy.pledgeSignature,
-      pledgeAcceptedAt: legacy.pledgeAcceptedAt,
+      pledgeSignature: canonical.preferences?.pledgeSignature ?? legacy.pledgeSignature,
+      pledgeAcceptedAt: canonical.preferences?.pledgeAcceptedAt ?? legacy.pledgeAcceptedAt,
     } as UserProfile;
     localStore.upsertUser(profile);
     return profile;
@@ -188,9 +188,7 @@ export async function listAllUsers(limitCount = 100): Promise<UserProfile[]> {
   // Read the same canonical profile rows that authorize database operations, then merge
   // the optional legacy document fields (pledge metadata, display labels, etc.).
   try {
-    const { data, error } = await supabase.from('mfp_user_profiles')
-      .select('user_id,email,display_name,gender,gender_group,role,account_status,team_key,team_confirmed,allowed_modules,created_at,updated_at')
-      .limit(limitCount);
+    const { data, error } = await supabase.rpc('mfp_admin_list_users', { p_limit: limitCount });
     if (error) throw error;
     for (const row of data ?? []) {
       const current = localStore.getUsers().find(u => u.uid === row.user_id);
