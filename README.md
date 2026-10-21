@@ -48,3 +48,12 @@ Admin approves a user and assigns one team. Users cannot choose or switch teams;
 - `supabase/migrations/` — backend schema and security changes.
 - `docs/` — deployment steps, QA blockers, Android notes, optional legacy cleanup SQL.
 - `CHANGELOG.md` — what changed in this release.
+
+
+## v2.14.5 update
+
+- Report ZIP selection/cancellation hardened for mobile browsers; profile hydration now falls back to the authenticated self-profile RPC if a direct profile SELECT fails.
+- Evidence navigation is limited to Assign Links and Evidence Pairing; Searching opens directly to Paste Links.
+- Team/gender lead selectors load authorized user lists through the admin-only RPC.
+- Site Assets now includes full pledge text, organization name, and official signature-label settings.
+- The gender-lead backend validation change is included in `supabase/migrations/20261021042646_allow_admins_as_gender_team_leads.sql` and was applied to the connected Supabase project.

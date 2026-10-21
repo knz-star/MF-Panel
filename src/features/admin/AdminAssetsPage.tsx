@@ -83,6 +83,43 @@ function errorText(error: unknown): string {
   return message;
 }
 
+const DEFAULT_PLEDGE_TEXT = 'میں اقرار کرتا/کرتی ہوں کہ میں اپنی ذمہ داری دیانت داری سے ادا کروں گا/گی، صرف مجاز ٹیم اور کام تک رسائی استعمال کروں گا/گی، اور کسی بھی ریکارڈ یا ثبوت میں غیر مجاز تبدیلی نہیں کروں گا/گی۔ میری درخواست انتظامیہ کے جائزے اور منظوری کے بعد ہی فعال ہوگی۔';
+
+function PledgeDocumentSettings() {
+  const [pledgeText, setPledgeText] = useState(DEFAULT_PLEDGE_TEXT);
+  const [organizationName, setOrganizationName] = useState('MF MPanel');
+  const [signatureName, setSignatureName] = useState('Authorized Organization Signature');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+  useEffect(() => {
+    let active = true;
+    void getDoc(doc(db, 'siteSettings', 'pledge')).then((snap) => {
+      if (!active || !snap.exists()) return;
+      const data = snap.data() ?? {};
+      if (typeof data.pledgeText === 'string') setPledgeText(data.pledgeText);
+      if (typeof data.organizationName === 'string') setOrganizationName(data.organizationName);
+      if (typeof data.signatureName === 'string') setSignatureName(data.signatureName);
+    }).catch((error) => { if (active) setMessage(errorText(error)); }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
+  const save = async () => {
+    if (!pledgeText.trim() || !organizationName.trim() || !signatureName.trim()) { setMessage('Full pledge text, organization name, and signature label are required.'); return; }
+    setSaving(true); setMessage('');
+    try {
+      await setDoc(doc(db, 'siteSettings', 'pledge'), { pledgeText: pledgeText.trim(), organizationName: organizationName.trim(), signatureName: signatureName.trim(), updatedAt: serverTimestamp(), updatedBy: auth.currentUser?.uid ?? null }, { merge: true });
+      setMessage('Pledge text and signature details saved. New pledge PDFs will use these values.');
+    } catch (error) { setMessage(errorText(error)); } finally { setSaving(false); }
+  };
+  return <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+    <div className="flex items-start gap-3"><div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-700"><FileImage className="h-5 w-5"/></div><div><h2 className="font-semibold text-slate-950">Pledge & official signature settings</h2><p className="mt-1 text-sm leading-5 text-slate-500">Yahan mukammal Urdu tahreer, organization/team ka naam aur signature label update karein. Yeh setting Site Assets ke andar save hoti hai.</p></div></div>
+    <label className="mt-4 block text-sm font-medium text-slate-700">Organization / team name<input value={organizationName} onChange={(e)=>setOrganizationName(e.target.value)} maxLength={160} disabled={loading} className="mt-1.5 min-h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-normal" placeholder="Your organization or team name"/></label>
+    <label className="mt-4 block text-sm font-medium text-slate-700">Official signature name / label<input value={signatureName} onChange={(e)=>setSignatureName(e.target.value)} maxLength={160} disabled={loading} className="mt-1.5 min-h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-normal" placeholder="Authorized signature name"/></label>
+    <label className="mt-4 block text-sm font-medium text-slate-700">Complete pledge text<textarea value={pledgeText} onChange={(e)=>setPledgeText(e.target.value)} rows={5} maxLength={12000} disabled={loading} dir="auto" className="mt-1.5 w-full rounded-xl border border-slate-200 p-3 text-sm font-normal leading-7" placeholder="Paste the complete Urdu pledge / tahreer here"/></label>
+    <div className="mt-3 flex flex-wrap items-center gap-3"><button type="button" onClick={()=>void save()} disabled={loading||saving} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white disabled:opacity-50">{saving?<Loader2 className="h-4 w-4 animate-spin"/>:<Save className="h-4 w-4"/>}{saving?'Saving…':'Save pledge settings'}</button>{message&&<p role="status" className="text-xs leading-5 text-slate-600">{message}</p>}</div>
+  </section>;
+}
+
 export const AdminAssetsPage: React.FC = () => {
   const [assets, setAssets] = useState<AssetRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -315,7 +352,7 @@ export const AdminAssetsPage: React.FC = () => {
           <Link to="/admin" className="text-xs font-semibold text-slate-500 hover:text-slate-900">← Admin Dashboard</Link>
           <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.18em] text-blue-700">Public site content</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">Landing page assets</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">Manage site visuals and the official signature used on the MF MPanel pledge PDF. Add an active “Official pledge signature” image here to appear on downloaded pledge PDFs. Changes are saved to Supabase database.</p>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">Manage site visuals, official signature artwork, and the full pledge document. The pledge settings below let you change the complete Urdu text, organization/team name, and signature label used in new PDFs.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button onClick={() => void refreshAssets()} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"><RefreshCw className="h-4 w-4" /> Refresh</button>
@@ -324,6 +361,7 @@ export const AdminAssetsPage: React.FC = () => {
       </header>
 
       <LandingVideoSettings />
+      <PledgeDocumentSettings />
 
       {message && <div role="status" className={`flex items-start gap-2 rounded-xl border p-3 text-sm ${message.type === 'error' ? 'border-rose-200 bg-rose-50 text-rose-800' : message.type === 'success' ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-slate-200 bg-slate-50 text-slate-700'}`}><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /><span className="min-w-0 break-words">{message.text}</span><button className="ml-auto shrink-0" onClick={() => setMessage(null)} aria-label="Dismiss message"><X className="h-4 w-4" /></button></div>}
 

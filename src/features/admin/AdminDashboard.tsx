@@ -1,5 +1,3 @@
-import { EvidenceAppStatusCard } from '../dashboard/EvidenceAppStatusCard';
-import { EvidencePerformanceDashboard } from '../dashboard/EvidencePerformanceDashboard';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -102,13 +100,6 @@ export const AdminDashboard: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      <EvidenceAppStatusCard />
-      <Link to="/admin/evidence-connections" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50"><ShieldCheck className="h-4 w-4" /> View linked Evidence users and manage access <ArrowRight className="h-4 w-4" /></Link>
-      <Link to="/workspace/reports" className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-900 hover:bg-blue-100"><FileArchive className="h-4 w-4" /> Organization Reports & Team Sharing <ArrowRight className="h-4 w-4" /></Link>
-      <Link to="/admin/gender-teams" className="inline-flex items-center gap-2 rounded-xl border border-pink-200 bg-pink-50 px-4 py-3 text-sm font-semibold text-pink-900 hover:bg-pink-100"><Users className="h-4 w-4" /> Male/Female Team Dashboards <ArrowRight className="h-4 w-4" /></Link>
-      <Link to="/admin/evidence-operations" className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-900 hover:bg-emerald-100"><Activity className="h-4 w-4" /> Evidence batches, screenshots, exports & settings <ArrowRight className="h-4 w-4" /></Link>
-      <Link to="/admin/workflow-control" className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-900 hover:bg-rose-100"><ShieldCheck className="h-4 w-4" /> Admin Review Queue & Safe Workflow Reset <ArrowRight className="h-4 w-4" /></Link>
-      <EvidencePerformanceDashboard />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200">
         <div>
           <div className="text-[11px] font-semibold text-rose-700 uppercase tracking-wider">
@@ -118,7 +109,7 @@ export const AdminDashboard: React.FC = () => {
             Admin Master Dashboard
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Centralized platform oversight: user RBAC permissions, queue configurations, and global record discovery.
+            Quick overview and shortcuts to dedicated admin pages. Detailed tools stay on their own pages to keep this home screen focused.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

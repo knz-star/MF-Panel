@@ -15,8 +15,7 @@ export const AppLayout: React.FC = () => {
   const inferredTeam: TeamKey = userProfile?.team ?? (userProfile?.role === 'CHECKER' ? 'checking' : userProfile?.role === 'SEARCHER' ? 'searching' : userProfile?.allowedModules?.includes('checking') && !userProfile?.allowedModules?.includes('searching') ? 'checking' : userProfile?.allowedModules?.includes('reports') && !userProfile?.allowedModules?.includes('searching') && !userProfile?.allowedModules?.includes('checking') ? 'reports' : 'searching');
   const teamNav: Record<TeamKey, NavItem[]> = {
     searching: [
-      { name: 'Searching Workspace', path: '/searching', icon: LayoutDashboard },
-      { name: 'Import links', path: '/searching/import', icon: FileArchive },
+      { name: 'Paste Links', path: '/searching/import', icon: FileArchive },
     ],
     checking: [
       { name: 'Checking Workspace', path: '/checking', icon: LayoutDashboard },
@@ -28,8 +27,8 @@ export const AppLayout: React.FC = () => {
       { name: 'Shared reports', path: '/shared-reports', icon: Users },
     ],
     evidence: [
-      { name: 'Evidence Pairing', path: '/dashboard/evidence-linking', icon: Smartphone },
       { name: 'Assign Links', path: '/dashboard/get-links', icon: FileArchive },
+      { name: 'Evidence Pairing', path: '/dashboard/evidence-linking', icon: Smartphone },
     ],
   };
   const adminNav: NavItem[] = [
@@ -56,9 +55,9 @@ export const AppLayout: React.FC = () => {
   const accessibleTeams = userProfile?.team ? [userProfile.team] : [];
   const managerNav: NavItem[] = [{ name: 'Team analytics', path: '/admin/analytics', icon: Activity }, { name: 'Male/Female team dashboard', path: '/admin/gender-teams', icon: Users }, { name: 'Workspace reports', path: '/workspace/reports', icon: FileText }, { name: 'Shared reports', path: '/shared-reports', icon: Users }, { name: 'My Profile', path: '/profile', icon: UserRound }];
   const primaryTeam = userProfile?.team && accessibleTeams.includes(userProfile.team) ? userProfile.team : inferredTeam;
-  const userNav = [...teamNav[primaryTeam], { name: 'Shared reports', path: '/shared-reports', icon: Users }, { name: 'My Profile', path: '/profile', icon: UserRound }];
+  const userNav = (primaryTeam === 'evidence' || primaryTeam === 'searching') ? teamNav[primaryTeam] : [...teamNav[primaryTeam], { name: 'Shared reports', path: '/shared-reports', icon: Users }, { name: 'My Profile', path: '/profile', icon: UserRound }];
   const allNav = isAdmin ? adminNav : isTeamAdmin ? managerNav : userNav;
-  const homePath = isAdmin ? '/admin' : isTeamAdmin ? '/admin/analytics' : primaryTeam === 'evidence' ? '/dashboard/evidence-linking' : primaryTeam === 'reports' ? '/workspace/reports' : `/${primaryTeam}`;
+  const homePath = isAdmin ? '/admin' : isTeamAdmin ? '/admin/analytics' : primaryTeam === 'evidence' ? '/dashboard/get-links' : primaryTeam === 'searching' ? '/searching/import' : primaryTeam === 'reports' ? '/workspace/reports' : `/${primaryTeam}`;
   const pageTitle = allNav.find((item) => location.pathname === item.path)?.name || location.pathname.split('/').filter(Boolean).pop()?.replace(/[-_]/g, ' ').replace(/^./, c => c.toUpperCase()) || 'Workspace';
   const isActive = (item: NavItem) => location.pathname === item.path || (item.path !== homePath && location.pathname.startsWith(item.path + '/'));
   const handleLogout = async () => { await logout(); navigate('/login', { replace: true }); };

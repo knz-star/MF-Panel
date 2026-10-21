@@ -14,7 +14,6 @@ import { PledgePage } from '../features/auth/PledgePage';
 import { AdminLinksPage } from '../features/admin/AdminLinksPage';
 
 // Searching Team
-import { SearchingDashboard } from '../features/searching/SearchingDashboard';
 import { SearchingImportPage } from '../features/searching/SearchingImportPage';
 import { SearchingProfilesPage } from '../features/searching/SearchingProfilesPage';
 import { SearchingPostsPage } from '../features/searching/SearchingPostsPage';
@@ -109,11 +108,7 @@ export const router = createBrowserRouter([
       // Searching Team Module
       {
         path: '/searching',
-        element: (
-          <ProtectedRoute requiredModule="searching">
-            <SearchingDashboard />
-          </ProtectedRoute>
-        ),
+        element: <Navigate to="/searching/import" replace />,
       },
       {
         path: '/searching/import',

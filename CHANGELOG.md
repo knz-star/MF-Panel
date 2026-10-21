@@ -1,3 +1,17 @@
+## v2.14.5 — Report picker, team navigation, admin selection and pledge settings
+
+- Stabilized Supabase profile hydration after browser/file-picker resumes; existing canonical profiles are loaded even if the profile-ensure RPC has a transient error.
+- Hardened ZIP/JSON file selection, cancellation and re-selection behavior.
+- Evidence team bottom navigation now contains only Assign Links and Evidence Pairing, in that order.
+- Searching workspace opens directly to Paste Links as its only team page.
+- Active admin options are loaded from canonical profiles for team and gender lead selectors.
+- Simplified the pledge settings to allow the full Urdu text, organization name and official signature label to be configured in Site Assets.
+
+## 2.14.4
+- Fix persistent team assignments with a single secure Supabase admin RPC.
+- Stop legacy user-document writes from overwriting canonical access profiles during login/logout.
+- Keep canonical profile and compatibility user document synchronized atomically.
+
 # Changelog
 
 ## 2.14.3 — Pledge PDF, signup review, and team analytics fixes
