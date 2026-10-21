@@ -59,8 +59,8 @@ export const GlobalTrackerPage: React.FC = () => {
     if (!selected) return [];
     const profileId = selected.kind === 'profile' ? selected.id : selected.parentId;
     const related = events.filter(e => clean(e.profileId) === clean(profileId) || clean(e.postId) === clean(selected.id) || clean(e.postId) === clean(selected.publicId));
-    const checkEvents = checks.filter(c => clean(c.profileId) === clean(profileId)).map(c => ({ eventId: c.checkingRecordId, profileId: c.profileId, stage: 'CHECKING', action: c.outcome, previousStatus: '', newStatus: c.outcome, actorEmail: c.checkedByEmail || c.checkedBy, createdAt: c.checkedAt, metadata: { notes: c.notes, region: c.region } } as WorkflowEvent));
-    const base = selected.kind === 'profile' && selected.profile ? [{ eventId: `created-${selected.id}`, profileId, stage: 'SEARCHING' as const, action: 'Profile record created', newStatus: selected.status, createdAt: selected.createdAt, actorEmail: selected.profile.createdBy } as WorkflowEvent] : [];
+    const checkEvents = checks.filter(c => clean(c.profileId) === clean(profileId)).map(c => ({ eventId: c.checkingRecordId, profileId: c.profileId, stage: 'CHECKING', action: c.outcome, previousStatus: '', newStatus: c.outcome, actorUid: c.checkedBy || '', actorEmail: c.checkedByEmail || c.checkedBy, createdAt: c.checkedAt, metadata: { notes: c.notes, region: c.region } } as WorkflowEvent));
+    const base = selected.kind === 'profile' && selected.profile ? [{ eventId: `created-${selected.id}`, profileId, stage: 'SEARCHING' as const, action: 'Profile record created', newStatus: selected.status, createdAt: selected.createdAt, actorUid: selected.profile.createdBy || '', actorEmail: selected.profile.createdBy } as WorkflowEvent] : [];
     return [...related, ...checkEvents, ...base].sort((a,b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
   }, [selected, events, checks]);
   const submit = (e: React.FormEvent) => { e.preventDefault(); setSelectedKey(''); };
