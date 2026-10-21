@@ -23,3 +23,5 @@ assert.match(health,/mfp_web_api/,'System Health checks the website RPC dispatch
 assert.doesNotMatch(health,/mfp_select_team/,'System Health does not depend on removed team selection RPC');
 assert.match(reports,/jobId=/,'Report jobs open a job-specific analysis route');
 console.log('PASS: MF MPanel acceptance source smoke tests');
+
+assert.match(router,/path: '\/admin\/global-tracker'[\s\S]*?GlobalTrackerPage/,'Global Tracker route is registered');

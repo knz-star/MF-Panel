@@ -19,7 +19,10 @@ export const PledgePage: React.FC = () => {
   const [pledgeText, setPledgeText] = useState(DEFAULT_PLEDGE_TEXT);
   const [organizationName, setOrganizationName] = useState('MF MPanel');
   const [signatureName, setSignatureName] = useState('Authorized Organization Signature');
-  useEffect(() => { let active = true; void getDoc(doc(db, 'siteSettings', 'pledge')).then((snap) => { if (!active || !snap.exists()) return; const data = snap.data() ?? {}; if (typeof data.pledgeText === 'string') setPledgeText(data.pledgeText); if (typeof data.organizationName === 'string') setOrganizationName(data.organizationName); if (typeof data.signatureName === 'string') setSignatureName(data.signatureName); }).catch((e) => console.warn('Pledge settings unavailable; using defaults.', e)); return () => { active = false; }; }, []);
+  const [pdfFontSize, setPdfFontSize] = useState(30);
+  const [pdfLineSpacing, setPdfLineSpacing] = useState(1.65);
+  const [pdfMarginSize, setPdfMarginSize] = useState(24);
+  useEffect(() => { let active = true; void getDoc(doc(db, 'siteSettings', 'pledge')).then((snap) => { if (!active || !snap.exists()) return; const data = snap.data() ?? {}; if (typeof data.pledgeText === 'string') setPledgeText(data.pledgeText); if (typeof data.organizationName === 'string') setOrganizationName(data.organizationName); if (typeof data.signatureName === 'string') setSignatureName(data.signatureName); if (Number.isFinite(Number(data.fontSize))) setPdfFontSize(Math.min(30, Math.max(12, Number(data.fontSize)))); if (Number.isFinite(Number(data.lineSpacing))) setPdfLineSpacing(Math.min(2.2, Math.max(1.2, Number(data.lineSpacing)))); if (Number.isFinite(Number(data.marginSize))) setPdfMarginSize(Math.min(40, Math.max(12, Number(data.marginSize)))); }).catch((e) => console.warn('Pledge settings unavailable; using defaults.', e)); return () => { active = false; }; }, []);
   const [accepted, setAccepted] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -36,27 +39,33 @@ export const PledgePage: React.FC = () => {
     ctx.font = 'bold 46px Arial'; ctx.fillText(`${organizationName} — USER PLEDGE`, 595, 105);
     ctx.fillStyle = '#2563eb'; ctx.fillRect(100, 135, 990, 4);
     ctx.fillStyle = '#1e293b'; ctx.textAlign = 'right'; ctx.direction = 'rtl';
-    ctx.font = 'bold 40px "Noto Nastaliq Urdu", "Noto Naskh Arabic", serif'; ctx.fillText('عہد نامہ اور دستخط', 1090, 220);
-    ctx.font = '30px "Noto Nastaliq Urdu", "Noto Naskh Arabic", serif';
-    const pledge = `${pledgeText} نام: ${name.trim()}۔ تاریخ: ${date}۔`;
-    const words = pledge.split(/\s+/); let line = ''; let y = 300;
-    for (const word of words) { const candidate = line ? `${line} ${word}` : word; if (ctx.measureText(candidate).width > 990 && line) { ctx.fillText(line, 1090, y); line = word; y += 58; } else line = candidate; }
-    if (line) ctx.fillText(line, 1090, y);
+    ctx.font = 'bold 40px "Noto Nastaliq Urdu", "Noto Naskh Arabic", serif'; ctx.fillText('عہد نامہ اور اقرار', 1090, 220);
+    const pledge = `${pledgeText}\nنام: ${name.trim()}۔ تاریخ: ${date}۔`;
+    const marginPx = Math.max(70, Math.min(160, pdfMarginSize * 4));
+    const maxWidth = 1190 - marginPx * 2;
+    const bodyTop = 300; const bodyBottom = 980;
+    let bodyFontSize = Math.max(12, Math.min(42, pdfFontSize * 1.35));
+    const makeLines = (size: number) => { ctx.font = `${size}px "Noto Nastaliq Urdu", "Noto Naskh Arabic", serif`; const lines: string[] = []; for (const paragraph of pledge.split('\n')) { let line = ''; for (const word of paragraph.split(/\s+/)) { const candidate = line ? `${line} ${word}` : word; if (ctx.measureText(candidate).width > maxWidth && line) { lines.push(line); line = word; } else line = candidate; } if (line) lines.push(line); } return lines; };
+    let bodyLines = makeLines(bodyFontSize);
+    while (bodyFontSize > 12 && bodyLines.length * bodyFontSize * pdfLineSpacing > bodyBottom - bodyTop) { bodyFontSize -= 1; bodyLines = makeLines(bodyFontSize); }
+    ctx.textAlign = 'right'; ctx.direction = 'rtl'; ctx.fillStyle = '#1e293b';
+    let y = bodyTop; const lineHeight = bodyFontSize * pdfLineSpacing;
+    for (const bodyLine of bodyLines) { if (y > bodyBottom) break; ctx.fillText(bodyLine, 1190 - marginPx, y, maxWidth); y += lineHeight; }
     ctx.fillStyle = '#64748b'; ctx.textAlign = 'center'; ctx.direction = 'ltr'; ctx.font = '24px Arial';
-    ctx.fillText('The account remains pending until administrator review.', 595, 850);
+    ctx.fillText('The account remains pending until administrator review.', 595, 1450);
     ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(90, 1130); ctx.lineTo(535, 1130); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(655, 1130); ctx.lineTo(1100, 1130); ctx.stroke();
-    ctx.fillStyle = '#0f172a'; ctx.textAlign = 'center'; ctx.font = 'italic 42px cursive'; ctx.fillText(name.trim(), 312, 1080);
-    ctx.font = 'bold 24px Arial'; ctx.fillText('USER SIGNATURE', 312, 1180); ctx.fillText(signatureName.slice(0, 42), 877, 1180);
-    ctx.font = '22px Arial'; ctx.fillStyle = '#475569'; ctx.fillText(`Date: ${date}`, 312, 1230); ctx.fillText(organizationName.slice(0, 48), 877, 1230);
+    ctx.beginPath(); ctx.moveTo(90, 1190); ctx.lineTo(535, 1190); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(655, 1190); ctx.lineTo(1100, 1190); ctx.stroke();
+    ctx.fillStyle = '#0f172a'; ctx.textAlign = 'center'; ctx.font = 'italic 42px cursive'; ctx.fillText(name.trim(), 312, 1140);
+    ctx.font = 'bold 24px Arial'; ctx.fillText('USER SIGNATURE', 312, 1240); ctx.fillText(signatureName.slice(0, 42), 877, 1240);
+    ctx.font = '22px Arial'; ctx.fillStyle = '#475569'; ctx.fillText(`Date: ${date}`, 312, 1290); ctx.fillText(organizationName.slice(0, 48), 877, 1290);
     try {
       const { data: assetRows, error: assetError } = await supabase.from('mfp_documents').select('data').eq('collection_name', 'landingAssets').limit(100);
       if (!assetError) {
         const asset = (assetRows ?? []).map((r: any) => r.data ?? {}).find((d: any) => d.assetType === 'signature' && d.isActive === true && typeof d.imageUrl === 'string' && d.imageUrl);
         if (asset?.imageUrl) {
           const response = await fetch(asset.imageUrl, { mode: 'cors' });
-          if (response.ok) { const image = await createImageBitmap(await response.blob()); ctx.drawImage(image, 700, 930, 350, 130); image.close(); }
+          if (response.ok) { const image = await createImageBitmap(await response.blob()); ctx.drawImage(image, 700, 1050, 350, 110); image.close(); }
         }
       }
     } catch (assetError) { console.warn('Official pledge signature image unavailable; PDF includes its signature line.', assetError); }

@@ -176,7 +176,7 @@ export const AdminUsersPage: React.FC = () => {
                 <option value="USER">USER (Standard Member)</option>
                 <option value="SEARCHER">SEARCHER (Searching Team)</option>
                 <option value="CHECKER">CHECKER (Checking Team)</option>
-                {editingUser?.role === 'TEAM_ADMIN' && <option value="TEAM_ADMIN">TEAM_ADMIN (managed in Team Analytics)</option>}
+                <option value="TEAM_ADMIN">TEAM_ADMIN (Team Lead — finish assignment in Team Analytics)</option>
                 <option value="ADMIN">ADMIN (Full Administrative Control)</option>
               </select>
             </div>
@@ -197,7 +197,7 @@ export const AdminUsersPage: React.FC = () => {
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-2">Assigned Team</label>
-            {selectedRole === 'ADMIN' ? <div className="rounded-xl border border-rose-100 bg-rose-50 p-3 text-xs leading-5 text-rose-800">Senior administrators have full access to all teams and administration features.</div> : <><select value={selectedTeam} disabled={selectedRole === 'TEAM_ADMIN'} onChange={(e) => handleTeamChange(e.target.value as TeamKey | '')} className="w-full rounded-xl border border-slate-300 bg-white p-3 text-sm"><option value="">No team assigned</option><option value="searching">Searching Team</option><option value="checking">Checking Team</option><option value="reports">Workspace Reports</option><option value="evidence">Evidence Team</option></select><p className="mt-2 text-[11px] leading-5 text-slate-500">Each standard user receives one team. The user cannot select or switch teams; their assigned workspace opens automatically after approval. Team administrators are managed from Team Analytics.</p></>}
+            {selectedRole === 'ADMIN' ? <div className="rounded-xl border border-rose-100 bg-rose-50 p-3 text-xs leading-5 text-rose-800">Senior administrators have full access to all teams and administration features.</div> : <><select value={selectedTeam} disabled={selectedRole === 'TEAM_ADMIN'} onChange={(e) => handleTeamChange(e.target.value as TeamKey | '')} className="w-full rounded-xl border border-slate-300 bg-white p-3 text-sm"><option value="">No team assigned</option><option value="searching">Searching Team</option><option value="checking">Checking Team</option><option value="reports">Workspace Reports</option><option value="evidence">Evidence Team</option></select><p className="mt-2 text-[11px] leading-5 text-slate-500">Each standard user receives one team. The user cannot select or switch teams; their assigned workspace opens automatically after approval. To appoint a Team Admin, select TEAM_ADMIN here, save the user, then assign them to the relevant team in Team Analytics. The team lead must be an active account.</p></>}
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-2">
