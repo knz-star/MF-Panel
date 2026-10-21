@@ -176,13 +176,13 @@ export const AdminDashboard: React.FC = () => {
 
       {/* Global Record Search */}
       <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-2xs space-y-4">
-        <div>
-          <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div><h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
             Global Record Search
           </h2>
           <p className="text-[11px] text-slate-500">
-            Query across all canonical profiles by Profile ID (PRF), SRC reference, Platform, or full URL.
-          </p>
+            Quick search across loaded profiles. For full URL / public ID lookup and the recorded workflow roadmap, use Global Tracker.
+          </p></div><Link to="/admin/global-tracker" className="inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 text-xs font-bold text-white hover:bg-blue-700"><Search className="h-3.5 w-3.5"/>Open Global Tracker</Link>
         </div>
 
         <form onSubmit={handleGlobalSearch} className="flex gap-2">

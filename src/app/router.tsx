@@ -49,6 +49,7 @@ import { ProfilePage } from '../features/profile/ProfilePage';
 import { AdminTeamAnalyticsPage } from '../features/admin/AdminTeamAnalyticsPage';
 import { AdminWorkflowControlPage } from '../features/admin/AdminWorkflowControlPage';
 import { AdminSystemHealthPage } from '../features/admin/AdminSystemHealthPage';
+import { GlobalTrackerPage } from '../features/admin/GlobalTrackerPage';
 
 export const router = createBrowserRouter([
   // Public Landing & Auth Routes
@@ -210,7 +211,7 @@ export const router = createBrowserRouter([
       // Organization reports are separate from the admin-only ZIP Report Generator.
       { path: '/admin/gender-teams', element: <ProtectedRoute><GenderTeamDashboardPage /></ProtectedRoute> },
       { path: '/workspace/reports', element: <ProtectedRoute><OrganizationReportsPage /></ProtectedRoute> },
-      { path: '/shared-reports', element: <ProtectedRoute><OrganizationReportsPage /></ProtectedRoute> },
+      { path: '/shared-reports', element: <Navigate to="/workspace/reports" replace /> },
 
       // Activity & History
       {
@@ -228,6 +229,7 @@ export const router = createBrowserRouter([
         ),
       },
       { path: '/admin/links', element: <ProtectedRoute requireAdmin><AdminLinksPage /></ProtectedRoute> },
+      { path: '/admin/global-tracker', element: <ProtectedRoute requireAdmin><GlobalTrackerPage /></ProtectedRoute> },
       { path: '/admin/analytics', element: <ProtectedRoute requireAdmin><AdminTeamAnalyticsPage /></ProtectedRoute> },
       { path: '/admin/workflow-control', element: <ProtectedRoute requireAdmin><AdminWorkflowControlPage /></ProtectedRoute> },
       { path: '/admin/system-health', element: <ProtectedRoute requireAdmin><AdminSystemHealthPage /></ProtectedRoute> },

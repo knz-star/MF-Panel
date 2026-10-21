@@ -89,6 +89,9 @@ function PledgeDocumentSettings() {
   const [pledgeText, setPledgeText] = useState(DEFAULT_PLEDGE_TEXT);
   const [organizationName, setOrganizationName] = useState('MF MPanel');
   const [signatureName, setSignatureName] = useState('Authorized Organization Signature');
+  const [fontSize, setFontSize] = useState(18);
+  const [lineSpacing, setLineSpacing] = useState(1.65);
+  const [marginSize, setMarginSize] = useState(24);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -100,6 +103,9 @@ function PledgeDocumentSettings() {
       if (typeof data.pledgeText === 'string') setPledgeText(data.pledgeText);
       if (typeof data.organizationName === 'string') setOrganizationName(data.organizationName);
       if (typeof data.signatureName === 'string') setSignatureName(data.signatureName);
+      if (Number.isFinite(Number(data.fontSize))) setFontSize(Math.min(30, Math.max(12, Number(data.fontSize))));
+      if (Number.isFinite(Number(data.lineSpacing))) setLineSpacing(Math.min(2.2, Math.max(1.2, Number(data.lineSpacing))));
+      if (Number.isFinite(Number(data.marginSize))) setMarginSize(Math.min(40, Math.max(12, Number(data.marginSize))));
     }).catch((error) => { if (active) setMessage(errorText(error)); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
@@ -107,16 +113,37 @@ function PledgeDocumentSettings() {
     if (!pledgeText.trim() || !organizationName.trim() || !signatureName.trim()) { setMessage('Full pledge text, organization name, and signature label are required.'); return; }
     setSaving(true); setMessage('');
     try {
-      await setDoc(doc(db, 'siteSettings', 'pledge'), { pledgeText: pledgeText.trim(), organizationName: organizationName.trim(), signatureName: signatureName.trim(), updatedAt: serverTimestamp(), updatedBy: auth.currentUser?.uid ?? null }, { merge: true });
-      setMessage('Pledge text and signature details saved. New pledge PDFs will use these values.');
+      await setDoc(doc(db, 'siteSettings', 'pledge'), { pledgeText: pledgeText.trim(), organizationName: organizationName.trim(), signatureName: signatureName.trim(), fontSize, lineSpacing, marginSize, updatedAt: serverTimestamp(), updatedBy: auth.currentUser?.uid ?? null }, { merge: true });
+      setMessage('Document settings saved. The preview and newly generated pledge PDFs use these layout settings.');
     } catch (error) { setMessage(errorText(error)); } finally { setSaving(false); }
   };
+  const previewBody = `${pledgeText.trim()}\n\nنام: ____________________    تاریخ: ______________`;
   return <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-    <div className="flex items-start gap-3"><div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-700"><FileImage className="h-5 w-5"/></div><div><h2 className="font-semibold text-slate-950">Pledge & official signature settings</h2><p className="mt-1 text-sm leading-5 text-slate-500">Yahan mukammal Urdu tahreer, organization/team ka naam aur signature label update karein. Yeh setting Site Assets ke andar save hoti hai.</p></div></div>
-    <label className="mt-4 block text-sm font-medium text-slate-700">Organization / team name<input value={organizationName} onChange={(e)=>setOrganizationName(e.target.value)} maxLength={160} disabled={loading} className="mt-1.5 min-h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-normal" placeholder="Your organization or team name"/></label>
-    <label className="mt-4 block text-sm font-medium text-slate-700">Official signature name / label<input value={signatureName} onChange={(e)=>setSignatureName(e.target.value)} maxLength={160} disabled={loading} className="mt-1.5 min-h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-normal" placeholder="Authorized signature name"/></label>
-    <label className="mt-4 block text-sm font-medium text-slate-700">Complete pledge text<textarea value={pledgeText} onChange={(e)=>setPledgeText(e.target.value)} rows={5} maxLength={12000} disabled={loading} dir="auto" className="mt-1.5 w-full rounded-xl border border-slate-200 p-3 text-sm font-normal leading-7" placeholder="Paste the complete Urdu pledge / tahreer here"/></label>
-    <div className="mt-3 flex flex-wrap items-center gap-3"><button type="button" onClick={()=>void save()} disabled={loading||saving} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white disabled:opacity-50">{saving?<Loader2 className="h-4 w-4 animate-spin"/>:<Save className="h-4 w-4"/>}{saving?'Saving…':'Save pledge settings'}</button>{message&&<p role="status" className="text-xs leading-5 text-slate-600">{message}</p>}</div>
+    <div className="flex items-start gap-3"><div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-700"><FileImage className="h-5 w-5"/></div><div><h2 className="font-semibold text-slate-950">عہد نامہ — PDF Designer & Live Preview</h2><p className="mt-1 text-sm leading-5 text-slate-500">Text, organization/team name, signature label, font size, line spacing aur page margins adjust karein. Preview A4 one-page layout ko approximate karta hai; bohat lambi tahreer par font ko chhota karein.</p></div></div>
+    <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(300px,0.85fr)]">
+      <div className="space-y-4">
+        <label className="block text-sm font-medium text-slate-700">Organization / team name<input value={organizationName} onChange={(e)=>setOrganizationName(e.target.value)} maxLength={160} disabled={loading} className="mt-1.5 min-h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-normal" placeholder="Your organization or team name"/></label>
+        <label className="block text-sm font-medium text-slate-700">Official signature name / label<input value={signatureName} onChange={(e)=>setSignatureName(e.target.value)} maxLength={160} disabled={loading} className="mt-1.5 min-h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-normal" placeholder="Authorized signature name"/></label>
+        <label className="block text-sm font-medium text-slate-700">Complete Urdu pledge text<textarea value={pledgeText} onChange={(e)=>setPledgeText(e.target.value)} rows={6} maxLength={12000} disabled={loading} dir="rtl" lang="ur" className="mt-1.5 w-full rounded-xl border border-slate-200 p-3 text-right text-sm font-normal leading-8" placeholder="Mukammal Urdu halaf / tahreer yahan likhein"/></label>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <label className="block text-xs font-semibold text-slate-600">Font size <span className="float-right tabular-nums">{fontSize}px</span><input type="range" min="12" max="30" value={fontSize} onChange={e=>setFontSize(Number(e.target.value))} className="mt-3 w-full"/></label>
+          <label className="block text-xs font-semibold text-slate-600">Line spacing <span className="float-right tabular-nums">{lineSpacing.toFixed(2)}×</span><input type="range" min="1.2" max="2.2" step="0.05" value={lineSpacing} onChange={e=>setLineSpacing(Number(e.target.value))} className="mt-3 w-full"/></label>
+          <label className="block text-xs font-semibold text-slate-600">Page margins <span className="float-right tabular-nums">{marginSize}mm</span><input type="range" min="12" max="40" value={marginSize} onChange={e=>setMarginSize(Number(e.target.value))} className="mt-3 w-full"/></label>
+        </div>
+        <button type="button" onClick={()=>void save()} disabled={loading||saving} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white disabled:opacity-50">{saving?<Loader2 className="h-4 w-4 animate-spin"/>:<Save className="h-4 w-4"/>}{saving?'Saving…':'Save document design'}</button>
+        {message&&<p role="status" className="rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-700">{message}</p>}
+      </div>
+      <div className="min-w-0 rounded-2xl bg-slate-100 p-3 sm:p-5">
+        <div className="mb-3 flex items-center justify-between gap-2"><p className="text-xs font-bold uppercase tracking-wider text-slate-500">Live A4 preview</p><span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-600">1 page</span></div>
+        <article className="mx-auto flex aspect-[210/297] w-full max-w-[420px] flex-col overflow-hidden bg-white text-slate-900 shadow-xl" style={{padding:`${marginSize/2.5}%`}}>
+          <div className="border-b-2 border-emerald-700 pb-3 text-center"><p className="text-[9px] font-bold uppercase tracking-[0.16em] text-emerald-800">{organizationName || 'Organization / Team'}</p><h3 className="mt-2 text-base font-bold">عہد نامہ اور اقرار</h3><p className="mt-1 text-[8px] text-slate-500">OFFICIAL PLEDGE & DECLARATION</p></div>
+          <div dir="rtl" lang="ur" className="mt-4 flex-1 overflow-hidden whitespace-pre-wrap break-words text-right text-slate-800" style={{fontFamily:'"Noto Nastaliq Urdu", "Noto Naskh Arabic", serif',fontSize:`${Math.max(7,fontSize*0.55)}px`,lineHeight:lineSpacing}}>{previewBody}</div>
+          <div className="mt-4 grid grid-cols-2 gap-4 border-t border-slate-200 pt-4 text-center"><div className="border-t border-slate-400 pt-2"><p className="text-[8px] font-semibold">دستخط / Signature</p><p className="mt-1 break-words text-[8px]">User</p></div><div className="border-t border-slate-400 pt-2"><p className="text-[8px] font-semibold">مجاز دستخط</p><p className="mt-1 break-words text-[8px]">{signatureName || 'Signature label'}</p></div></div>
+          <p className="mt-3 text-center text-[7px] text-slate-400">{organizationName || 'Organization'} · Official Record</p>
+        </article>
+        <p className="mx-auto mt-3 max-w-[420px] text-[11px] leading-5 text-slate-500">Tip: agar text neeche se cut hota nazar aaye, font size ya line spacing kam karein. Preview changes are not saved until you press Save.</p>
+      </div>
+    </div>
   </section>;
 }
 
