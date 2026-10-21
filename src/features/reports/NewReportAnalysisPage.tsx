@@ -66,18 +66,31 @@ export const NewReportAnalysisPage: React.FC = () => {
   const { currentUser } = useAuth();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setSelectedFile(file);
-      setAnalysisResult(null);
-      setDownloadPackage(null);
-      setAssignmentMatch(null);
-      setErrorMessage(null);
+    const input = e.currentTarget;
+    const file = input.files?.[0] ?? null;
+    // Reset the native picker input after capturing the File. This supports
+    // re-selecting the same ZIP and avoids stale picker state on mobile browsers.
+    input.value = '';
+    if (!file) return; // User cancelled the picker; preserve the current screen.
+    if (!/\.zip$/i.test(file.name) && file.type !== 'application/zip' && file.type !== 'application/x-zip-compressed') {
+      setSelectedFile(null); setErrorMessage('Please select a ZIP archive (.zip).');
+      return;
     }
+    if (file.size > 100 * 1024 * 1024) {
+      setSelectedFile(null); setErrorMessage('ZIP file is larger than the 100 MB limit.');
+      return;
+    }
+    setSelectedFile(file);
+    setAnalysisResult(null);
+    setDownloadPackage(null);
+    setAssignmentMatch(null);
+    setErrorMessage(null);
   };
 
   const handleManifestFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const input = e.currentTarget;
+    const file = input.files?.[0];
+    input.value = '';
     setSelectedManifestFile(file ?? null);
     setAnalysisResult(null);
     setDownloadPackage(null);
@@ -102,6 +115,7 @@ export const NewReportAnalysisPage: React.FC = () => {
     e.preventDefault();
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
+      if (!/\.zip$/i.test(file.name) || file.size > 100 * 1024 * 1024) { setErrorMessage('Choose a ZIP archive no larger than 100 MB.'); return; }
       setSelectedFile(file);
       setAnalysisResult(null);
       setDownloadPackage(null);
@@ -194,7 +208,7 @@ export const NewReportAnalysisPage: React.FC = () => {
             ZIP Analysis & Screenshot Matching
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Ingest evidence ZIP archives, execute priority matching against Supabase workflow records, and package output bundles.
+            Admin-only, all-team report generation: ingest evidence ZIP archives, match records across every team, and package output bundles.
           </p>
         </div>
       </div>
@@ -255,7 +269,7 @@ export const NewReportAnalysisPage: React.FC = () => {
             />
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => { setErrorMessage(null); fileInputRef.current?.click(); }}
               className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
             >
               Browse Local Files

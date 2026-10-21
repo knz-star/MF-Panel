@@ -29,12 +29,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const hydrateUserOnce = async (user: AuthUser): Promise<void> => {
     setIsLoading(true); setProfileLoadError(null); setCurrentUser(user);
     try {
+      // Profile loading must not depend exclusively on the optional ensure RPC.
+      // On a browser/file-picker resume, an RPC/network hiccup must not hide an
+      // already-existing canonical profile and incorrectly block the workspace.
       const { error: ensureError } = await supabase.rpc('mfp_ensure_profile');
-      if (ensureError) throw ensureError;
+      if (ensureError) console.warn('mfp_ensure_profile was unavailable; checking the canonical profile directly.', ensureError);
       let profile = await getUserProfile(user.uid);
       const adminAuthorized = await hasAdminRecord(user.uid);
-      if (!profile) profile = await createInitialUserProfile(user.uid, user.email || '', user.displayName || user.email?.split('@')[0] || 'User', user.emailVerified, undefined, adminAuthorized, user.gender);
-      else if (adminAuthorized && profile.role !== 'ADMIN' && profile.role !== 'TEAM_ADMIN') profile = await ensureAdminProfile(user.uid, user.email || profile.email, user.displayName || profile.displayName);
+      if (!profile && !ensureError) {
+        profile = await createInitialUserProfile(user.uid, user.email || '', user.displayName || user.email?.split('@')[0] || 'User', user.emailVerified, undefined, adminAuthorized, user.gender);
+      }
+      if (!profile) throw ensureError || new Error('Supabase Auth is signed in, but no readable mfp_user_profiles row exists for this account. Check profile RLS and mfp_ensure_profile migration.');
+      if (adminAuthorized && profile.role !== 'ADMIN' && profile.role !== 'TEAM_ADMIN') profile = await ensureAdminProfile(user.uid, user.email || profile.email, user.displayName || profile.displayName);
       setUserProfile(profile);
     } catch (error) {
       console.error('MF MPanel profile hydration failed:', error);
@@ -48,11 +54,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
   useEffect(() => {
     void checkSupabaseConnection().then(setConnectionStatus);
-    void supabase.auth.getSession().then(({ data }) => { const user = mapUser(data.session?.user); if (user) void hydrateUser(user); else setIsLoading(false); });
+    void supabase.auth.getSession().then(({ data }) => { const user = mapUser(data.session?.user); if (user) void Promise.resolve().then(() => hydrateUser(user)); else setIsLoading(false); });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const user = mapUser(session?.user);
       if (!user) { hydrationPromises.current.clear(); setCurrentUser(null); setUserProfile(null); setProfileLoadError(null); setIsLoading(false); return; }
-      void hydrateUser(user);
+      void Promise.resolve().then(() => hydrateUser(user));
     });
     return () => subscription.unsubscribe();
   }, []);

@@ -62,22 +62,7 @@ export async function getDocs(ref: CollectionRef | QueryRef) {
   return makeQuerySnapshot(await selectRows(qref.collection, qref.constraints));
 }
 function safeTeamFromData(data: any): string | null { return typeof data?.team === 'string' ? data.team : typeof data?.teamKey === 'string' ? data.teamKey : null; }
-async function syncAuthProfile(collectionName: string, id: string, data: any) {
-  if (collectionName !== 'users') return;
-  const uid = await authUid(); if (!uid) return;
-  let callerIsAdmin = false;
-  const { data: caller } = await supabase.from('mfp_user_profiles').select('role,account_status').eq('user_id', uid).maybeSingle();
-  callerIsAdmin = caller?.role === 'ADMIN' && caller?.account_status === 'ACTIVE';
-  if (uid !== id && !callerIsAdmin) return;
-  const payload = {
-    user_id: id, email: data.email ?? null, display_name: data.displayName ?? data.display_name ?? 'User',
-    role: data.role ?? 'USER', account_status: data.accountStatus ?? 'ACTIVE', team_key: safeTeamFromData(data),
-    team_confirmed: data.teamConfirmed === true, allowed_modules: data.allowedModules ?? [], updated_at: new Date().toISOString(),
-    ...(data.gender === 'male' || data.gender === 'female' ? { gender: data.gender, gender_group: data.gender } : {}),
-  };
-  const { error } = await supabase.from('mfp_user_profiles').upsert(payload, { onConflict: 'user_id' });
-  if (error) throw error;
-}
+
 export async function setDoc(ref: DocumentRef, value: Record<string, any>, options?: { merge?: boolean }) {
   const prior = options?.merge ? await getDoc(ref) : null;
   const data = options?.merge && prior?.exists() ? { ...(prior.data() ?? {}), ...value } : value;
@@ -86,7 +71,6 @@ export async function setDoc(ref: DocumentRef, value: Record<string, any>, optio
   const team = safeTeamFromData(data) ?? existingRow?.team_key ?? await currentTeam();
   const { error } = await supabase.from('mfp_documents').upsert({ collection_name: ref.name, document_id: ref.id, data, owner_uid: existingRow?.owner_uid ?? uid, team_key: team, created_at: existingRow?.created_at ?? new Date().toISOString(), updated_at: new Date().toISOString() }, { onConflict: 'collection_name,document_id' });
   if (error) throw error;
-  await syncAuthProfile(ref.name, ref.id, data);
 }
 export async function addDoc(ref: CollectionRef, value: Record<string, any>) {
   const id = crypto.randomUUID(); await setDoc({ __kind: 'document', name: ref.name, id }, value); return { id };
@@ -125,7 +109,6 @@ export function writeBatch(_db: unknown) {
         const rows = operations.map((op) => ({ collection_name: op.ref.name, document_id: op.ref.id, data: op.data ?? {}, owner_uid: uid, team_key: safeTeamFromData(op.data) ?? team, created_at: now, updated_at: now }));
         const { error } = await supabase.from('mfp_documents').upsert(rows, { onConflict: 'collection_name,document_id' });
         if (error) throw error;
-        for (const op of operations) await syncAuthProfile(op.ref.name, op.ref.id, op.data ?? {});
         return;
       }
       for (const op of operations) {
