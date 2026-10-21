@@ -19,11 +19,6 @@ alter table public.mfp_web_notifications add column if not exists message text;
 alter table public.mfp_web_notifications add column if not exists notification_type text;
 alter table public.mfp_web_notifications add column if not exists created_at timestamptz default now();
 alter table public.mfp_web_notifications enable row level security;
-drop policy if exists mfp_web_notifications_own_read on public.mfp_web_notifications;
-create policy mfp_web_notifications_own_read on public.mfp_web_notifications
-  for select to authenticated using (user_id = auth.uid());
-revoke all on public.mfp_web_notifications from anon;
-grant select on public.mfp_web_notifications to authenticated;
 create index if not exists mfp_web_notifications_user_idx on public.mfp_web_notifications(user_id, created_at desc);
 
 -- 2) Expired pairing codes were never cleaned up. Keep rows for audit if they were used/linked;

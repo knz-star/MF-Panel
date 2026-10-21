@@ -19,6 +19,9 @@ Added
 
 Kept on purpose (Android / live-DB compatibility): legacy `config` public-read policy, `app_registrations` view, `mobile-compat/` bridge, all existing migrations unchanged.
 
+### Applied to the live Supabase project (2026-10-21)
+Migrations 1–7 are live. Extra fixes made while applying: `mfp_ensure_profile` now keeps gender/gender_group; migrations 3 and 5 no longer install a temporary policy that exposed profiles/posts to every signed-in user; `mfp_normalize_link_url` has a fixed search_path.
+
 ## v2.14.3 — session recovery and checking queue compatibility
 - Treat the profile-bootstrap RPC as recoverable instead of blocking valid restored Supabase sessions.
 - Defer auth-state database hydration until after the Supabase auth callback to reduce auth-lock/deadlock issues.

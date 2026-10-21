@@ -41,3 +41,9 @@ Do not apply a migration twice if your live migration inventory already shows it
 - Shell syntax checks: passed.
 - Full Vite build and dependency-backed tests: **not verified** because dependency installation timed out in this environment.
 - SQL migration execution and Vercel deployment: **not performed**. This ZIP is a source fix package, not a claim that the live website is already fixed.
+
+
+## Status on the live project (nvzvyzgantmtwjfnrqdo), applied 2026-10-21
+All seven migrations are applied (as 8 live migrations; the permissive documents policy from files 3/5 was deliberately skipped).
+Verified read-only in a rolled-back transaction as Admin: team analytics, link summary, export settings read and Evidence pairing all succeed.
+New signups now start as PENDING until an Admin assigns one team. The two existing USER accounts without a team were set to PENDING.

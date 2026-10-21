@@ -14,16 +14,17 @@ drop function if exists public.mfp_select_team(text);
 -- New signups must wait for an explicit Admin team assignment and approval.
 create or replace function public.mfp_ensure_profile()
 returns jsonb language plpgsql security definer set search_path=public,auth,pg_temp as $$
-declare uid uuid := auth.uid(); u auth.users%rowtype; p public.mfp_user_profiles%rowtype;
+declare uid uuid := auth.uid(); u auth.users%rowtype; p public.mfp_user_profiles%rowtype; v_gender text;
 begin
   if uid is null then raise exception 'Authentication required'; end if;
   select * into u from auth.users where id=uid;
   if not found then raise exception 'Authenticated user record missing'; end if;
-  insert into public.mfp_user_profiles(user_id,email,display_name,role,account_status,team_confirmed,allowed_modules)
-    values(uid,u.email,coalesce(u.raw_user_meta_data->>'full_name',split_part(coalesce(u.email,'user'),'@',1)),'USER','PENDING',false,'{}'::text[])
+  v_gender := case when u.raw_user_meta_data->>'gender' in ('male','female') then u.raw_user_meta_data->>'gender' else null end;
+  insert into public.mfp_user_profiles(user_id,email,display_name,role,account_status,team_confirmed,allowed_modules,gender,gender_group)
+    values(uid,u.email,coalesce(u.raw_user_meta_data->>'full_name',split_part(coalesce(u.email,'user'),'@',1)),'USER','PENDING',false,'{}'::text[],v_gender,v_gender)
     on conflict(user_id) do nothing;
   select * into p from public.mfp_user_profiles where user_id=uid;
-  return jsonb_build_object('user_id',p.user_id,'email',p.email,'display_name',p.display_name,'role',p.role,'account_status',p.account_status,'team_key',p.team_key,'team_confirmed',p.team_confirmed,'allowed_modules',p.allowed_modules);
+  return jsonb_build_object('user_id',p.user_id,'email',p.email,'display_name',p.display_name,'role',p.role,'account_status',p.account_status,'team_key',p.team_key,'team_confirmed',p.team_confirmed,'allowed_modules',p.allowed_modules,'gender',p.gender,'gender_group',p.gender_group);
 end; $$;
 revoke all on function public.mfp_ensure_profile() from public,anon;
 grant execute on function public.mfp_ensure_profile() to authenticated;
@@ -145,11 +146,11 @@ begin
     elsif action='checker-next' then
       if not admin_ok and v_team <> 'checking' then raise exception 'Checking team access required'; end if;
       if not exists(select 1 from public.mfp_checking_assignments where checker_id=uid and status in ('ASSIGNED','OPEN','REOPEN','RECHECK')) then
-        with candidates as (select d.document_id,d.data from public.mfp_documents d where d.collection_name='profiles' and nullif(trim(coalesce(d.data->>'canonicalUrl',d.data->>'originalUrl',d.data->>'url')),'') is not null and coalesce(lower(d.data->>'isTestData'),'false') <> 'true' and upper(coalesce(d.data->>'currentWorkflowStatus','SEARCHED')) not in ('INVALID','BLOCKED','FAILED_BLOCKED','DELETED','VERIFIED') and not exists(select 1 from public.mfp_checking_assignments a where a.profile_id=d.document_id) order by d.created_at limit 10 for update of d skip locked), ins as (
+        with candidates as (select d.document_id,d.data from public.mfp_documents d where d.collection_name='profiles' and upper(coalesce(d.data->>'currentWorkflowStatus',''))='QUEUED_CHECKING' and not exists(select 1 from public.mfp_checking_assignments a where a.profile_id=d.document_id) order by d.created_at limit 10 for update of d skip locked), ins as (
           insert into public.mfp_checking_assignments(profile_id,checker_id,batch_id) select document_id,uid,batch_uuid from candidates on conflict(profile_id) do nothing returning profile_id)
         update public.mfp_documents d set data=d.data||jsonb_build_object('currentWorkflowStatus','CHECKING_ASSIGNED','assignedCheckerUid',uid::text),updated_at=now() from ins where d.collection_name='profiles' and d.document_id=ins.profile_id;
       end if;
-      select jsonb_build_object('item',case when a.id is null then null else jsonb_build_object('assignmentId',a.id,'profileId',coalesce(d.data->>'mfpProfileId',a.profile_id),'sourceProfileId',a.profile_id,'url',coalesce(d.data->>'canonicalUrl',d.data->>'originalUrl',d.data->>'url'),'platform',coalesce(d.data->>'platform','Other'),'status',a.status,'postUrls',a.post_urls,'assignedAt',a.assigned_at) end,
+      select jsonb_build_object('item',case when a.id is null then null else jsonb_build_object('assignmentId',a.id,'profileId',coalesce(d.data->>'mfpProfileId',a.profile_id),'sourceProfileId',a.profile_id,'url',d.data->>'canonicalUrl','platform',coalesce(d.data->>'platform','Other'),'status',a.status,'postUrls',a.post_urls,'assignedAt',a.assigned_at) end,
         'remainingInPrivateBatch',(select count(*) from public.mfp_checking_assignments x where x.checker_id=uid and x.batch_id=a.batch_id and x.status in ('ASSIGNED','OPEN','REOPEN','RECHECK'))) into v
       from (select * from public.mfp_checking_assignments where checker_id=uid and status in ('ASSIGNED','OPEN','REOPEN','RECHECK') order by assigned_at limit 1) a left join public.mfp_documents d on d.collection_name='profiles' and d.document_id=a.profile_id;
       return coalesce(v,jsonb_build_object('item',null,'remainingInPrivateBatch',0));

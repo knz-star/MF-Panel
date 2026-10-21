@@ -20,17 +20,5 @@ $$;
 revoke all on function mfp_private.current_gender_group() from public, anon;
 grant execute on function mfp_private.current_gender_group() to authenticated;
 
--- Gender-scoped report copies are visible only to members in the same stored gender group.
-drop policy if exists mfp_documents_select on public.mfp_documents;
-create policy mfp_documents_select on public.mfp_documents
-for select to authenticated
-using (
-  (select mfp_private.is_admin())
-  or owner_uid = (select auth.uid())
-  or (team_key is not null and team_key = (select mfp_private.current_team()))
-  or collection_name in ('profiles','posts','checkingRecords','workflowEvents','reportJobs','reportPackages','settings','landingAssets','siteSettings')
-  or (collection_name = 'organizationReports' and coalesce(data->'sharedTeams', '[]'::jsonb) ? (select mfp_private.current_team()))
-  or (collection_name = 'organizationReports' and coalesce(data->'sharedGenderGroups', '[]'::jsonb) ? (select mfp_private.current_gender_group()))
-);
-comment on policy mfp_documents_select on public.mfp_documents is 'Admin/owner/team workflow access plus explicitly shared functional-team and gender-group reports.';
+-- The documents SELECT policy that honours sharedGenderGroups is installed by 20261020133000 (team-scoped).
 notify pgrst, 'reload schema';

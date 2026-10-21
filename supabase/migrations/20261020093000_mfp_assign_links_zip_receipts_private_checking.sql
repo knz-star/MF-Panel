@@ -1,6 +1,6 @@
 -- MF MPanel v2.10.0: atomic link assignment, ZIP receipt matching and private checking batches.
 create or replace function public.mfp_normalize_link_url(p_url text)
-returns text language sql immutable as $$
+returns text language sql immutable set search_path = pg_catalog, pg_temp as $$
  select regexp_replace(
    replace(replace(regexp_replace(lower(regexp_replace(trim(coalesce(p_url,'')), '#.*$', '')), '/+$', ''), 'https://www.', 'https://'), 'http://www.', 'http://'),
    '/+$','');
