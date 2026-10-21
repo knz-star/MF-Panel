@@ -29,10 +29,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const hydrateUserOnce = async (user: AuthUser): Promise<void> => {
     setIsLoading(true); setProfileLoadError(null); setCurrentUser(user);
     try {
-      // Profile bootstrap is best-effort: a transient/missing RPC must not invalidate
-      // an otherwise valid persisted Supabase session after refresh or browser restart.
       const { error: ensureError } = await supabase.rpc('mfp_ensure_profile');
-      if (ensureError) console.warn('Profile bootstrap RPC unavailable; checking existing profile:', ensureError.message);
+      if (ensureError) throw ensureError;
       let profile = await getUserProfile(user.uid);
       const adminAuthorized = await hasAdminRecord(user.uid);
       if (!profile) profile = await createInitialUserProfile(user.uid, user.email || '', user.displayName || user.email?.split('@')[0] || 'User', user.emailVerified, undefined, adminAuthorized, user.gender);
@@ -50,17 +48,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
   useEffect(() => {
     void checkSupabaseConnection().then(setConnectionStatus);
-    void supabase.auth.getSession().then(({ data, error }) => { if (error) console.warn('Session restore warning:', error.message); const user = mapUser(data.session?.user); if (user) void hydrateUser(user); else setIsLoading(false); }).catch((error) => { console.warn('Session restore failed:', error); setIsLoading(false); });
+    void supabase.auth.getSession().then(({ data }) => { const user = mapUser(data.session?.user); if (user) void hydrateUser(user); else setIsLoading(false); });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const user = mapUser(session?.user);
       if (!user) { hydrationPromises.current.clear(); setCurrentUser(null); setUserProfile(null); setProfileLoadError(null); setIsLoading(false); return; }
-      // Defer database/RPC work outside Supabase's auth callback to avoid auth-lock deadlocks.
-      queueMicrotask(() => { void hydrateUser(user); });
+      void hydrateUser(user);
     });
     return () => subscription.unsubscribe();
   }, []);
 
-  const refreshProfile = async () => { if (!currentUser) return; setProfileLoadError(null); try { const profile = await getUserProfile(currentUser.uid); if (profile) { setUserProfile(profile); return; } await hydrateUser(currentUser); } catch (error) { const details = error && typeof error === 'object' ? error as { code?: unknown; message?: unknown } : {}; setProfileLoadError({ code: typeof details.code === 'string' ? details.code : 'profile/retry-failed', message: typeof details.message === 'string' ? details.message : String(error) }); } };
+  const refreshProfile = async () => { if (!currentUser) return; setProfileLoadError(null); const profile = await getUserProfile(currentUser.uid); if (profile) setUserProfile(profile); };
   const loginWithEmail = async (email: string, pass: string) => { setIsLoading(true); try { const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password: pass }); if (error) throw error; const user = mapUser(data.user); if (user) await hydrateUser(user); } finally { setIsLoading(false); } };
   const signupWithEmail = async (name: string, email: string, pass: string, gender: 'male' | 'female') => {
     setIsLoading(true);

@@ -36,9 +36,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
       .eq('user_id', uid).maybeSingle()),
     7000,
   );
-  // A canonical-profile query may fail transiently during refresh/deployment.
-  // Continue to the legacy mirror as a recovery path; do not treat auth as logged out.
-  if (canonicalError) console.warn('Canonical profile lookup failed; trying legacy profile mirror:', canonicalError.message);
+  if (canonicalError) throw canonicalError;
   let legacy: Record<string, any> = {};
   try {
     const { data } = await supabase.from('mfp_documents').select('data')

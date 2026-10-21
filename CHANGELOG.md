@@ -21,10 +21,3 @@ Kept on purpose (Android / live-DB compatibility): legacy `config` public-read p
 
 ### Applied to the live Supabase project (2026-10-21)
 Migrations 1–7 are live. Extra fixes made while applying: `mfp_ensure_profile` now keeps gender/gender_group; migrations 3 and 5 no longer install a temporary policy that exposed profiles/posts to every signed-in user; `mfp_normalize_link_url` has a fixed search_path.
-
-## v2.14.3 — session recovery and checking queue compatibility
-- Treat the profile-bootstrap RPC as recoverable instead of blocking valid restored Supabase sessions.
-- Defer auth-state database hydration until after the Supabase auth callback to reduce auth-lock/deadlock issues.
-- Add a profile refresh recovery path and fallback to the legacy profile mirror when canonical profile lookup fails.
-- Add gender selection to Profile Settings and persist it to the canonical Supabase profile plus the compatibility mirror.
-- Update the link-workflow migration's checker queue selection so eligible stored profile links can be assigned even when their status was not explicitly set to `QUEUED_CHECKING`; terminal and test records remain excluded.
