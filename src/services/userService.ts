@@ -36,14 +36,29 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
       .eq('user_id', uid).maybeSingle()),
     7000,
   );
-  if (canonicalError) throw canonicalError;
+  let canonicalRow: any = canonical;
+  if (canonicalError) {
+    // Authenticated self-profile RPC is a safe fallback when a transient Data API
+    // SELECT/RLS issue occurs after a browser resumes from the native file picker.
+    // The RPC derives auth.uid() server-side and returns only that account's profile.
+    const { data: ensured, error: ensureError } = await supabase.rpc('mfp_ensure_profile');
+    if (ensureError || !ensured || ensured.user_id !== uid) throw canonicalError;
+    canonicalRow = {
+      user_id: ensured.user_id, email: ensured.email, display_name: ensured.display_name,
+      gender: ensured.gender, gender_group: ensured.gender_group, role: ensured.role,
+      account_status: ensured.account_status, team_key: ensured.team_key,
+      team_confirmed: ensured.team_confirmed, allowed_modules: ensured.allowed_modules,
+      preferences: ensured.preferences ?? {}, created_at: ensured.created_at, updated_at: ensured.updated_at,
+    };
+  }
   let legacy: Record<string, any> = {};
   try {
     const { data } = await supabase.from('mfp_documents').select('data')
       .eq('collection_name', COLLECTION).eq('document_id', uid).maybeSingle();
     legacy = (data?.data && typeof data.data === 'object' ? data.data : {}) as Record<string, any>;
   } catch { /* Optional legacy mirror; canonical authorization remains authoritative. */ }
-  if (canonical) {
+  if (canonicalRow) {
+    const canonical = canonicalRow;
     const modules = Array.isArray(canonical.allowed_modules) ? canonical.allowed_modules : [];
     const profile: UserProfile = {
       ...legacy,
@@ -156,32 +171,31 @@ export async function updateUserRoleAndModules(params: {
     localStore.upsertUser(existing);
   }
 
-  // mfp_user_profiles is the canonical authorization source used by database operations.
-  // Update it first; otherwise the website can show a module grant that the backend rejects.
-  const now = new Date().toISOString();
-  const { error: canonicalError } = await supabase.from('mfp_user_profiles').update({
-    role: params.role,
-    account_status: params.accountStatus,
-    team_key: singleTeam ?? null,
-    team_confirmed: params.role === 'ADMIN' || (params.accountStatus === 'ACTIVE' && !!singleTeam),
-    allowed_modules: safeModules,
-    updated_at: now,
-  }).eq('user_id', params.targetUid);
-  if (canonicalError) throw new Error(`Could not update canonical team access: ${canonicalError.message}`);
-
-  try {
-    await withTimeout(updateDoc(doc(db, COLLECTION, params.targetUid), {
-      role: params.role,
-      team: singleTeam ?? null,
-      allowedModules: safeModules,
-      accountStatus: params.accountStatus,
-      teamConfirmed: params.role === 'ADMIN' || (params.accountStatus === 'ACTIVE' && !!singleTeam),
-      updatedAt: now,
-    }), 5000, undefined);
-  } catch (err) {
-    // Canonical authorization is already updated; surface legacy mirror failure so it can be repaired.
-    handleBackendError(err, OperationType.UPDATE, `${COLLECTION}/${params.targetUid}`);
-  }
+  // A single privileged RPC updates canonical authorization and the compatibility
+  // document mirror in one transaction. Never perform separate client writes here.
+  const { data, error } = await supabase.rpc('mfp_admin_update_user_access', {
+    p_target_uid: params.targetUid,
+    p_role: params.role,
+    p_account_status: params.accountStatus,
+    p_team: singleTeam ?? null,
+  });
+  if (error) throw new Error(`Could not save user access: ${error.message}`);
+  if (!data?.success) throw new Error('Could not confirm that user access was saved. Please refresh and retry.');
+  const savedModules = Array.isArray(data.allowedModules) ? data.allowedModules as ModuleKey[] : safeModules;
+  const savedTeam = (data.team ?? undefined) as TeamKey | undefined;
+  const savedStatus = data.accountStatus as AccountStatus;
+  const savedRole = data.role as UserRole;
+  const savedConfirmed = data.teamConfirmed === true;
+  const refreshed = localStore.getUsers().find((u) => u.uid === params.targetUid);
+  if (refreshed) localStore.upsertUser({
+    ...refreshed,
+    role: savedRole,
+    team: savedTeam,
+    allowedModules: savedModules,
+    accountStatus: savedStatus,
+    teamConfirmed: savedConfirmed,
+    updatedAt: new Date().toISOString(),
+  });
 }
 
 export async function listAllUsers(limitCount = 100): Promise<UserProfile[]> {
