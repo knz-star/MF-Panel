@@ -55,7 +55,7 @@ export const EvidenceLinkingPage: React.FC = () => {
   const generate = async () => {
     setBusy(true); setError(''); setDiagnosticError(null); setMessage(''); setCopied(false);
     try {
-      if (requestId) await cancelPairing(requestId).catch(() => undefined);
+      if (requestId) await cancelPairing(requestId, code).catch(() => undefined);
       const result = await createPairing();
       const exactCode = String(result.code ?? '').replace(/\D/g, '').padStart(6, '0').slice(-6);
       if (!/^\d{6}$/.test(exactCode)) throw new Error('The server did not return a valid six-digit code.');
