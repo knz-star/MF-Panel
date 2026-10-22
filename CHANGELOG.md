@@ -89,3 +89,18 @@ Migrations 1–7 are live. Extra fixes made while applying: `mfp_ensure_profile`
 - Pledge PDF generation uses the saved signature and submission timestamp, carries the user ID/email for attribution, and falls back to the standard pledge text if document settings are unavailable.
 - Improved admin user-list loading failures with a visible actionable message instead of failing silently.
 - Versioned the package as 2.14.12. Production build/browser performance verification is still required after dependency installation and deployment.
+
+
+## 2.14.14 — Multi-admin teams and inactivity score decay
+
+- Team Analytics now supports assigning multiple active Team Admins to the same team; each Team Admin remains scoped to one team, and the senior admin cannot self-assign.
+- Analytics now returns assigned admin IDs and displays all assigned admin names plus their average activity score.
+- Activity score uses real workflow actions in a rolling 30-day window, capped at 100 points, with a 25% reduction after 3 inactive days and a 50% reduction after 7 inactive days. Scores refresh through the existing dashboard polling; this does not change Android app source.
+- Live Supabase migrations `mfp_multi_team_admins_and_inactivity_score_decay` and `mfp_require_multi_admin_assignment_payload` applied successfully. Frontend build/browser verification and website deployment are still pending.
+
+
+## 2.14.15 — Checking Team UX and Admin Link Exports
+- Reworked Checking dashboard and single-link review screen for mobile: open first, then choose Re-open, Verified, Invalid, or Blocked.
+- Verified requires exactly three URLs in a dedicated modal; Invalid uses a required note modal; Blocked offers PTA/Platform choices and stores the choice as a generated note.
+- Admin Link Management now shows workflow status and downloads Invalid and Blocked links separately as text files.
+- Android app source unchanged. Production build and deployment remain unverified because npm install timed out.

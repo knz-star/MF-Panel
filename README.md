@@ -79,3 +79,34 @@ Migration `20261021062000_mfp_gender_scoped_activity_score.sql` is applied to th
 - The database stores screenshot IDs and evidence metadata only; screenshot image bytes are not uploaded by the reconciliation RPC.
 - Evidence assignment JSON includes available related post IDs and post URLs.
 - Supabase migration: `20261022021800_mfp_evidence_zip_identity_tracking.sql`.
+
+
+## v2.14.13 update
+- ZIP analysis retrieves the configured archive password through an authenticated, admin-only Supabase RPC; the password is not hard-coded in the frontend or manually requested on every upload. Existing ZIP exports must use the password configured in Supabase.
+- Physical evidence package folders now contain `links.txt` and a local `Screenshots/` subfolder together for each link batch. Unmatched screenshots remain isolated under `Unmatched-Review/Screenshots/`.
+- A signed-in user can download their own previously submitted pledge PDF from My Profile.
+- The administrator directory now includes `TEAM_ADMIN` records as well as senior `ADMIN` records, and requests up to 1,000 user profiles instead of only the first 100.
+- Searching workspace filters out downstream Checking/Evidence terminal outcomes so it focuses on new links, handoff, duplicates, invalid links and review.
+
+### Required Supabase migration
+Apply `supabase/migrations/20261022030000_mfp_auto_zip_password_and_team_ui.sql` before deploying the frontend. This creates an authenticated admin-only password retrieval RPC. It reads the private website setting first, then falls back to the existing `public.config` export setting used by the Evidence app. It does not grant access to anonymous users.
+
+### Verification notes
+- The password RPC migration has been applied to the connected Supabase project and checked: function exists, `anon` cannot execute it, `authenticated` can invoke it (the function itself enforces active admin role), and the legacy Supabase `public.config` export password is configured. The password value was not retrieved for diagnostics.
+- Frontend dependency installation timed out in this environment, so a full Vite production build and browser end-to-end test could not be completed here. Deploy only after CI/build passes.
+- Team performance cards already refresh on a 30-second interval and use recorded Supabase activity. The requested time-based score decay and full multi-admin-per-team assignment model require a separate, end-to-end-tested workflow migration; this release does not claim those two policies are implemented.
+
+
+## v2.14.14 update
+
+- Multiple active administrators can be assigned to one team from **Team Analytics**. A Team Admin can manage one team only; only Senior Admin can change these assignments.
+- Real-work activity score is calculated from the rolling 30-day action count (10 points per action, maximum 100), then multiplied by 0.75 after 3 inactive days or 0.50 after 7 inactive days. If there are no qualifying actions in the last 30 days, the score is 0.
+- Supabase migrations applied: `mfp_multi_team_admins_and_inactivity_score_decay` and `mfp_require_multi_admin_assignment_payload`. The website ZIP is not deployed automatically; run build and acceptance checks before production deployment. Android source remains unchanged.
+
+
+## 2.14.15 — Checking Team UX and Admin Link Exports
+
+- Redesigned the Checking dashboard and link review into mobile-first cards with a clear Open → Review → Submit flow. Only one active link is shown at a time.
+- Result actions appear after opening the link. Re-open remains available. Verified opens a modal that requires exactly three profile/post URLs; Invalid opens a required note box; Blocked offers only “By PTA” and “By Platform”, saving the selected reason as a system note without asking the checker to type one.
+- Admin Link Management displays each link’s workflow status and offers separate plain-text downloads for Invalid and Blocked links.
+- Android app source is unchanged. Frontend build and browser tests must be run after dependencies can be installed; this ZIP has not been deployed.
