@@ -399,7 +399,7 @@ export async function buildAndDownloadReportPackage(params: {
         if (!bytes) continue;
         const prefix = item.duplicateChecksum ? 'REVIEW-DUPLICATE-' : '';
         const name = safeFile(`${prefix}${item.batchLinkId ? `${item.batchLinkId}-` : ''}${item.matchedPublicProfileId || item.matchedProfileId ? `${item.matchedPublicProfileId || item.matchedProfileId}-` : ''}${item.matchedPublicPostId ? `${item.matchedPublicPostId}-` : ''}${item.filename}`);
-        physicalZip.folder(`Screenshots/${folderName}`)?.file(name, bytes);
+        physicalZip.folder(`${folderName}/Screenshots`)?.file(name, bytes);
         screenshotsZip.folder(folderName)?.file(name, bytes);
       } catch (error) {
         console.warn('Could not package screenshot:', item.path, error);
@@ -411,7 +411,7 @@ export async function buildAndDownloadReportPackage(params: {
   for (const item of matchedScreenshots.filter((s) => !associated.has(s.path))) {
     try {
       const bytes = await imageBytes(item);
-      if (bytes) physicalZip.folder('Screenshots/Unmatched-Review')?.file(safeFile(item.filename), bytes);
+      if (bytes) physicalZip.folder('Unmatched-Review/Screenshots')?.file(safeFile(item.filename), bytes);
     } catch (error) { console.warn('Could not package unmatched screenshot:', item.path, error); }
   }
 

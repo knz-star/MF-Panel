@@ -23,6 +23,7 @@ import {
   AnalysisSessionResult,
 } from '../../services/reportService';
 import { matchUploadedZip } from '../../services/linkWorkflowService';
+import { supabase } from '../../lib/supabase';
 import { ExtractedUrlItem, ExtractedScreenshotItem, ReportPackageManifest, EvidenceBatchManifest } from '../../types/report';
 
 export const NewReportAnalysisPage: React.FC = () => {
@@ -30,7 +31,7 @@ export const NewReportAnalysisPage: React.FC = () => {
   const [selectedManifestFile, setSelectedManifestFile] = useState<File | null>(null);
   const [batchManifest, setBatchManifest] = useState<EvidenceBatchManifest | null>(null);
   const [manifestError, setManifestError] = useState<string | null>(null);
-  const [archivePassword, setArchivePassword] = useState('');
+  const [archivePassword, setArchivePassword] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   const [savedSnapshot, setSavedSnapshot] = useState<any>(null);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
@@ -130,13 +131,26 @@ export const NewReportAnalysisPage: React.FC = () => {
     setDownloadPackage(null);
 
     try {
+      // Retrieve the saved ZIP secret from the authenticated Supabase admin RPC.
+      // It is never hard-coded in the website bundle or requested on each upload.
+      let password = '';
+      try {
+        const { data: secret, error: secretError } = await supabase.rpc('mfp_get_evidence_zip_password');
+        if (secretError) throw secretError;
+        password = typeof secret === 'string' ? secret : '';
+      } catch (secretError) {
+        console.warn('Saved ZIP password could not be retrieved from Supabase.', secretError);
+        throw new Error('Saved ZIP password could not be retrieved. Confirm that your administrator access is active and the Supabase ZIP export setting is configured.');
+      }
+      if (!password) throw new Error('No ZIP password is configured in Supabase. Ask an administrator to configure it once in Evidence Control Center.');
+      setArchivePassword(password || null);
       const result = await analyzeUploadedZip(
         selectedFile,
         currentUser?.uid || 'USER',
         currentUser?.email || undefined,
         linksPerFolder,
         batchManifest ?? undefined,
-        archivePassword || undefined
+        password || undefined
       );
       setAnalysisResult(result);
       // Match extracted ZIP URLs against this signed-in user's previously assigned links.
@@ -255,7 +269,7 @@ export const NewReportAnalysisPage: React.FC = () => {
           </div>
           <div className="mx-auto grid max-w-2xl gap-3 text-left sm:grid-cols-2">
             <label className="block rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-semibold text-slate-700">Optional batch JSON<input type="file" accept=".json,application/json" onChange={handleManifestFileChange} className="mt-2 block w-full text-xs font-normal"/><span className="mt-1 block text-[11px] font-normal text-slate-500">{batchManifest ? `${batchManifest.batchName || batchManifest.batchId || 'Batch manifest'} · ${batchManifest.links.length} links` : selectedManifestFile?.name || 'Use the batch JSON example you provided.'}</span></label>
-            <label className="block rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-semibold text-slate-700">ZIP password (if encrypted)<input type="password" autoComplete="off" value={archivePassword} onChange={(e) => setArchivePassword(e.target.value)} placeholder="Enter AES ZIP password" className="mt-2 min-h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-normal"/><span className="mt-1 block text-[11px] font-normal text-slate-500">Password is used in this browser session and is not saved with the report.</span></label>
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs text-emerald-900"><p className="font-semibold">ZIP password managed by Supabase</p><p className="mt-1 leading-5">The website automatically retrieves the saved password through an authenticated administrator-only operation. You do not need to enter it for every upload.</p>{archivePassword === null && <p className="mt-1 text-emerald-800">Password will be retrieved securely when analysis starts.</p>}</div>
           </div>
           {manifestError && <p role="alert" className="mx-auto max-w-2xl rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">{manifestError}</p>}
 
