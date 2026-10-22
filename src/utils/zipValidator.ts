@@ -127,6 +127,7 @@ export async function validateAndLoadZip(
         for (const entry of entries) {
           if (entry.directory) { zip.folder(entry.filename); continue; }
           if (entry.filename.includes('__MACOSX/') || entry.filename.endsWith('.DS_Store')) continue;
+          if (!entry.getData) throw new Error(`Entry ${entry.filename} cannot be extracted.`);
           const bytes = await entry.getData(new Uint8ArrayWriter(), { password });
           decryptedSizes.set(entry.filename, Number(entry.uncompressedSize || bytes.byteLength));
           zip.file(entry.filename, bytes, { binary: true, createFolders: true });

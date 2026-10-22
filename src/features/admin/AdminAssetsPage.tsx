@@ -162,7 +162,7 @@ export const AdminAssetsPage: React.FC = () => {
   useEffect(() => {
     const q = query(collection(db, ASSET_COLLECTION), orderBy('displayOrder', 'asc'));
     return onSnapshot(q, (snapshot) => {
-      const next = snapshot.docs.map((item) => {
+      const next = snapshot.docs.map((item: any) => {
         const data = item.data();
         return {
           id: item.id,
@@ -347,7 +347,7 @@ export const AdminAssetsPage: React.FC = () => {
     setLoading(true);
     try {
       const snapshot = await getDocs(query(collection(db, ASSET_COLLECTION), orderBy('displayOrder', 'asc')));
-      setAssets(snapshot.docs.map((item) => {
+      setAssets(snapshot.docs.map((item: any) => {
         const data = item.data();
         return {
           id: item.id,

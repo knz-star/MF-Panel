@@ -5,7 +5,7 @@ import { useAuth } from '../../features/auth/AuthContext';
 import type { TeamKey } from '../../types/user';
 import { ToastHost } from '../ToastHost';
 
-type NavItem = { name: string; path: string; icon: React.ComponentType<{ className?: string }> };
+type NavItem = { name: string; path: string; icon: React.ComponentType<{ className?: string; strokeWidth?: number }> };
 
 export const AppLayout: React.FC = () => {
   const location = useLocation();

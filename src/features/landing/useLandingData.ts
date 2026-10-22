@@ -102,7 +102,7 @@ export function useLandingAssets(): { assets: LandingAsset[]; status: LoadStatus
       q,
       (snap) => {
         window.clearTimeout(timeout);
-        const assets = snap.docs.flatMap((d) => {
+        const assets = snap.docs.flatMap((d: any) => {
           const a = toAsset(d.id, d.data());
           return a ? [a] : [];
         });
