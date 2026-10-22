@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AlertCircle, ArrowRight, Eye, EyeOff, Lock, Mail, Shield } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import { useLandingAssets } from '../landing/useLandingData';
+import { authErrorMessage } from '../../utils/authErrors';
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -20,17 +21,7 @@ export const LoginPage: React.FC = () => {
   const location = useLocation();
   const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/dashboard';
 
-  const friendlyError = (err: unknown) => {
-    const code = (err as { code?: string })?.code;
-    if (code === 'email_not_confirmed' || /email not confirmed/i.test(String((err as any)?.message || ''))) return 'Please confirm your email first. Check your inbox for the confirmation link.';
-    if (code === 'invalid_credentials' || code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') return 'Email ya password sahi nahi hai.';
-    if (code === 'invalid-api-key') return 'Supabase publishable key ya project URL invalid hai. Supabase configuration check karein.';
-    if (code === 'provider-disabled') return 'Supabase Dashboard → Authentication → Providers mein Email provider enable karein.';
-    if (code === 'too_many_requests' || code === 'auth/too-many-requests') return 'Bohat zyada attempts hue hain. Kuch dair baad dobara koshish karein.';
-    if (code === 'user_already_exists' || code === 'auth/email-already-in-use') return 'Is email ka account pehle se hai. Sign in karein ya password reset karein.';
-    if (code === 'permission-denied' || code === '42501') return 'Login ho gaya, lekin Supabase profile permission issue hai. mfp_user_profiles aur mfp_documents ki RLS policies verify karein; phir dobara login karein.';
-    return 'Sign in nahi ho saka. Email aur password check karein; agar masla barqarar rahe to admin se rabta karein.';
-  };
+  const friendlyError = (err: unknown) => authErrorMessage(err, 'login');
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();

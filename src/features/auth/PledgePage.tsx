@@ -30,48 +30,69 @@ export const PledgePage: React.FC = () => {
   const download = async () => {
     if (!name.trim()) return;
     const date = new Date().toLocaleDateString('ur-PK');
+    const refId = `MFP-${(currentUser?.uid ?? 'user').slice(0, 8).toUpperCase()}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`;
+    const W = 1190, H = 1684;
     const pdf = await PDFDocument.create();
     const page = pdf.addPage([595.28, 841.89]);
-    const canvas = document.createElement('canvas'); canvas.width = 1190; canvas.height = 1684;
+    const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
     const ctx = canvas.getContext('2d'); if (!ctx) throw new Error('PDF canvas is unavailable.');
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#0f172a'; ctx.textAlign = 'center'; ctx.direction = 'ltr';
-    ctx.font = 'bold 46px Arial'; ctx.fillText(`${organizationName} — USER PLEDGE`, 595, 105);
-    ctx.fillStyle = '#2563eb'; ctx.fillRect(100, 135, 990, 4);
-    ctx.fillStyle = '#1e293b'; ctx.textAlign = 'right'; ctx.direction = 'rtl';
-    ctx.font = 'bold 40px "Noto Nastaliq Urdu", "Noto Naskh Arabic", serif'; ctx.fillText('عہد نامہ اور اقرار', 1090, 220);
-    const pledge = `${pledgeText}\nنام: ${name.trim()}۔ تاریخ: ${date}۔`;
-    const marginPx = Math.max(70, Math.min(160, pdfMarginSize * 4));
-    const maxWidth = 1190 - marginPx * 2;
-    const bodyTop = 300; const bodyBottom = 980;
-    let bodyFontSize = Math.max(12, Math.min(42, pdfFontSize * 1.35));
-    const makeLines = (size: number) => { ctx.font = `${size}px "Noto Nastaliq Urdu", "Noto Naskh Arabic", serif`; const lines: string[] = []; for (const paragraph of pledge.split('\n')) { let line = ''; for (const word of paragraph.split(/\s+/)) { const candidate = line ? `${line} ${word}` : word; if (ctx.measureText(candidate).width > maxWidth && line) { lines.push(line); line = word; } else line = candidate; } if (line) lines.push(line); } return lines; };
-    let bodyLines = makeLines(bodyFontSize);
-    while (bodyFontSize > 12 && bodyLines.length * bodyFontSize * pdfLineSpacing > bodyBottom - bodyTop) { bodyFontSize -= 1; bodyLines = makeLines(bodyFontSize); }
-    ctx.textAlign = 'right'; ctx.direction = 'rtl'; ctx.fillStyle = '#1e293b';
-    let y = bodyTop; const lineHeight = bodyFontSize * pdfLineSpacing;
-    for (const bodyLine of bodyLines) { if (y > bodyBottom) break; ctx.fillText(bodyLine, 1190 - marginPx, y, maxWidth); y += lineHeight; }
-    ctx.fillStyle = '#64748b'; ctx.textAlign = 'center'; ctx.direction = 'ltr'; ctx.font = '24px Arial';
-    ctx.fillText('The account remains pending until administrator review.', 595, 1450);
-    ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(90, 1190); ctx.lineTo(535, 1190); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(655, 1190); ctx.lineTo(1100, 1190); ctx.stroke();
-    ctx.fillStyle = '#0f172a'; ctx.textAlign = 'center'; ctx.font = 'italic 42px cursive'; ctx.fillText(name.trim(), 312, 1140);
-    ctx.font = 'bold 24px Arial'; ctx.fillText('USER SIGNATURE', 312, 1240); ctx.fillText(signatureName.slice(0, 42), 877, 1240);
-    ctx.font = '22px Arial'; ctx.fillStyle = '#475569'; ctx.fillText(`Date: ${date}`, 312, 1290); ctx.fillText(organizationName.slice(0, 48), 877, 1290);
+    const URDU = '"Noto Nastaliq Urdu","Noto Naskh Arabic","Segoe UI",serif';
+    const LATIN = '-apple-system,"SF Pro Text","Segoe UI",Helvetica,Arial,sans-serif';
+    // Page + double frame
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = '#0b1b34'; ctx.lineWidth = 4; ctx.strokeRect(40, 40, W - 80, H - 80);
+    ctx.strokeStyle = '#10b981'; ctx.lineWidth = 1.5; ctx.strokeRect(54, 54, W - 108, H - 108);
+    // Header band
+    ctx.fillStyle = '#0b1b34'; ctx.fillRect(54, 54, W - 108, 190);
+    ctx.fillStyle = '#10b981'; ctx.fillRect(54, 244, W - 108, 6);
+    ctx.direction = 'ltr'; ctx.textAlign = 'center'; ctx.fillStyle = '#94a3b8'; ctx.font = `600 22px ${LATIN}`;
+    ctx.fillText(organizationName.toUpperCase(), W / 2, 112);
+    ctx.fillStyle = '#ffffff'; ctx.font = `700 52px ${LATIN}`; ctx.fillText('USER PLEDGE', W / 2, 176);
+    ctx.fillStyle = '#6ee7b7'; ctx.direction = 'rtl'; ctx.font = `700 40px ${URDU}`; ctx.fillText('عہد نامہ اور اقرار', W / 2, 226);
+    // Reference row
+    ctx.direction = 'ltr'; ctx.fillStyle = '#64748b'; ctx.font = `500 21px ${LATIN}`;
+    ctx.textAlign = 'left'; ctx.fillText(`Ref: ${refId}`, 110, 304);
+    ctx.textAlign = 'right'; ctx.fillText(`Date: ${date}`, W - 110, 304);
+    // Name card
+    ctx.fillStyle = '#f1f5f9'; ctx.beginPath(); ctx.roundRect(110, 332, W - 220, 96, 20); ctx.fill();
+    ctx.fillStyle = '#64748b'; ctx.textAlign = 'left'; ctx.font = `500 19px ${LATIN}`; ctx.fillText('DECLARANT', 140, 372);
+    ctx.fillStyle = '#0f172a'; ctx.font = `700 34px ${LATIN}`; ctx.fillText(name.trim().slice(0, 48), 140, 411);
+    // Body card
+    const bodyTop = 470, bodyBottom = 1130, marginPx = Math.max(150, Math.min(220, pdfMarginSize * 4 + 60));
+    ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(110, bodyTop - 20, W - 220, bodyBottom - bodyTop + 60, 24); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#10b981'; ctx.fillRect(W - 110 - 8, bodyTop + 10, 8, 120);
+    const maxWidth = W - marginPx * 2;
+    let size = Math.max(14, Math.min(42, pdfFontSize * 1.3));
+    const makeLines = (px: number) => { ctx.font = `${px}px ${URDU}`; const out: string[] = []; for (const para of pledgeText.split('\n')) { let line = ''; for (const word of para.split(/\s+/)) { const cand = line ? `${line} ${word}` : word; if (ctx.measureText(cand).width > maxWidth && line) { out.push(line); line = word; } else line = cand; } if (line) out.push(line); } return out; };
+    let lines = makeLines(size);
+    while (size > 14 && lines.length * size * pdfLineSpacing > bodyBottom - bodyTop - 20) { size -= 1; lines = makeLines(size); }
+    ctx.font = `${size}px ${URDU}`; ctx.fillStyle = '#1e293b'; ctx.direction = 'rtl'; ctx.textAlign = 'right';
+    let y = bodyTop + 40; for (const l of lines) { if (y > bodyBottom) break; ctx.fillText(l, W - marginPx, y, maxWidth); y += size * pdfLineSpacing; }
+    // Signature blocks
+    ctx.direction = 'ltr'; ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(130, 1380); ctx.lineTo(520, 1380); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(670, 1380); ctx.lineTo(1060, 1380); ctx.stroke();
+    ctx.textAlign = 'center'; ctx.fillStyle = '#0f172a'; ctx.font = 'italic 44px cursive'; ctx.fillText(name.trim().slice(0, 28), 325, 1355);
+    ctx.font = `700 21px ${LATIN}`; ctx.fillText('USER SIGNATURE', 325, 1420); ctx.fillText(signatureName.slice(0, 36).toUpperCase(), 865, 1420);
+    ctx.font = `400 20px ${LATIN}`; ctx.fillStyle = '#475569'; ctx.fillText(date, 325, 1456); ctx.fillText(organizationName.slice(0, 44), 865, 1456);
     try {
       const { data: assetRows, error: assetError } = await supabase.from('mfp_documents').select('data').eq('collection_name', 'landingAssets').limit(100);
       if (!assetError) {
         const asset = (assetRows ?? []).map((r: any) => r.data ?? {}).find((d: any) => d.assetType === 'signature' && d.isActive === true && typeof d.imageUrl === 'string' && d.imageUrl);
         if (asset?.imageUrl) {
           const response = await fetch(asset.imageUrl, { mode: 'cors' });
-          if (response.ok) { const image = await createImageBitmap(await response.blob()); ctx.drawImage(image, 700, 1050, 350, 110); image.close(); }
+          if (response.ok) { const image = await createImageBitmap(await response.blob()); ctx.drawImage(image, 690, 1275, 350, 100); image.close(); }
         }
       }
     } catch (assetError) { console.warn('Official pledge signature image unavailable; PDF includes its signature line.', assetError); }
+    // Footer
+    ctx.fillStyle = '#64748b'; ctx.font = `400 19px ${LATIN}`; ctx.textAlign = 'center';
+    ctx.fillText('The account remains pending until administrator review.', W / 2, 1560);
     const png = await canvasToPng(canvas);
     const image = await pdf.embedPng(png);
     page.drawImage(image, { x: 0, y: 0, width: page.getWidth(), height: page.getHeight() });
+    pdf.setTitle(`${organizationName} — User Pledge`); pdf.setProducer('MF MPanel');
     const bytes = await pdf.save();
     const pdfBuffer = new ArrayBuffer(bytes.byteLength); new Uint8Array(pdfBuffer).set(bytes);
     const blob = new Blob([pdfBuffer], { type: 'application/pdf' });

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { Mail, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
+import { authErrorMessage } from '../../utils/authErrors';
 
 export const ForgotPasswordPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -16,24 +17,16 @@ export const ForgotPasswordPage: React.FC = () => {
     setMessage(null);
 
     if (!email.trim()) {
-      setError('Please provide your email address.');
+      setError('Apna email address enter karein.');
       return;
     }
 
     setIsSubmitting(true);
     try {
       await resetPassword(email.trim());
-      setMessage('Password reset email sent! Please check your inbox.');
-    } catch (err: any) {
-      console.warn('Password reset attempt:', err);
-      const code = err?.code;
-      if (code === 'invalid-api-key') {
-        setError('Supabase publishable key invalid hai. Project URL aur publishable key check karein.');
-      } else if (code === 'provider_disabled' || code === 'provider-disabled') {
-        setError('Supabase Auth setup incomplete hai. Console mein Email/Password provider enable karein.');
-      } else {
-        setError(err?.message || 'Password reset email send nahi ho saka. Dobara koshish karein.');
-      }
+      setMessage('Agar yeh email registered hai to password reset link bhej diya gaya hai. Inbox aur spam folder check karein.');
+    } catch (err) {
+      setError(authErrorMessage(err, 'reset'));
     } finally {
       setIsSubmitting(false);
     }

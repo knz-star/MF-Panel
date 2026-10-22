@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AlertCircle, ArrowRight, Eye, EyeOff, Lock, Mail, User } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import { useLandingAssets } from '../landing/useLandingData';
+import { authErrorMessage } from '../../utils/authErrors';
 
 export const SignupPage: React.FC = () => {
   const [fullName, setFullName] = useState('');
@@ -16,21 +17,16 @@ export const SignupPage: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [diagnosticError, setDiagnosticError] = useState<unknown>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { signupWithEmail } = useAuth();
+  const { signupWithEmail, resendConfirmation } = useAuth();
   const { assets: siteAssets } = useLandingAssets();
   const siteBanner = siteAssets.find((asset) => asset.assetType === 'banner')?.imageUrl || 'https://i.postimg.cc/P5hbxNy7/20261015-112236.jpg';
   const navigate = useNavigate();
 
-  const friendlyError = (err: unknown) => {
-    const code = (err as { code?: string })?.code;
-    if (code === 'user_already_exists' || code === 'auth/email-already-in-use') return 'Is email par account pehle se bana hua hai. Login karein ya Forgot password use karein.';
-    if (code === 'weak_password' || code === 'auth/weak-password') return 'Password kam az kam 6 characters ka hona chahiye.';
-    if (code === 'invalid_email' || code === 'auth/invalid-email') return 'Email address valid nahi hai.';
-    if (code === 'provider-disabled') return 'Supabase Dashboard → Authentication → Providers mein Email provider enable karein.';
-    if (code === 'invalid-api-key') return 'Supabase publishable key invalid hai. Project URL aur publishable key check karein.';
-    if (code === 'permission-denied' || code === '42501') return 'Account create ho sakta hai, lekin profile load nahi hui. Dobara login karein; admin review aur team assignment ke baad workspace show hoga.';
-    return 'Account create nahi ho saka. Email check karein aur dobara koshish karein; agar masla rahe to admin se rabta karein.';
-  };
+  const friendlyError = (err: unknown) => authErrorMessage(err, 'signup');
+  const NEUTRAL = 'Request receive ho gayi. Agar yeh email naya hai to verification email bheji gayi hai; inbox aur spam check karein. Agar aap pehle se registered hain to Sign in karein ya Forgot password use karein.';
+  const [resendNote, setResendNote] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
+  const handleResend = async () => { setResending(true); setResendNote(null); try { await resendConfirmation(email); setResendNote('Agar is email ka account verification ka muntazir hai to nayi verification email bhej di gayi hai.'); } catch (err) { setResendNote(authErrorMessage(err, 'resend')); } finally { setResending(false); } };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -45,8 +41,8 @@ export const SignupPage: React.FC = () => {
       await signupWithEmail(fullName.trim(), email, password, gender);
       navigate('/pledge', { replace: true });
     } catch (err) {
-      if (err instanceof Error && err.message.startsWith('Signup submitted.')) {
-        setSuccess(err.message);
+      if ((err instanceof Error && err.message.startsWith('Signup submitted.')) || (err as { code?: string })?.code === 'signup_existing_or_pending') {
+        setSuccess(NEUTRAL);
         setError(null);
       } else {
         setDiagnosticError(err);
@@ -76,7 +72,7 @@ export const SignupPage: React.FC = () => {
       </div>
       <div className="mx-auto w-full max-w-md text-center"><Link to="/" className="mb-5 inline-flex items-center gap-2"><span className="grid h-9 w-9 place-items-center rounded-xl bg-slate-950 text-sm font-bold text-white">MF</span><span className="text-xl font-semibold tracking-tight text-slate-950">MF MPanel</span></Link><h1 className="text-2xl font-semibold tracking-tight text-slate-950">Create your account</h1><p className="mt-2 text-sm text-slate-600">Create your account, sign the Urdu pledge, then wait for admin review and team assignment.</p></div>
       <div className="mx-auto mt-8 w-full max-w-md rounded-[28px] border border-white/80 bg-white/90 p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.25)] backdrop-blur-xl sm:p-8">
-        {success && <div role="status" className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{success} <Link to="/login" className="font-semibold underline">Go to sign in</Link></div>}
+        {success && <div role="status" className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{success} <Link to="/login" className="font-semibold underline">Sign in par jayein</Link> · <button type="button" onClick={() => void handleResend()} disabled={resending} className="font-semibold underline disabled:opacity-60">{resending ? 'Bheja ja raha hai…' : 'Verification email dobara bhejein'}</button>{resendNote && <span className="mt-2 block text-xs">{resendNote}</span>}</div>}
         {error && <div role="alert" className="mb-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /><span className="break-words">{error}</span></div>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <label className="block text-sm font-medium text-slate-700">Full name<div className="relative mt-1.5"><User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input required autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full rounded-xl border border-slate-200 py-3 pl-10 pr-3 text-sm outline-none focus:border-blue-600" placeholder="Your name" /></div></label>
