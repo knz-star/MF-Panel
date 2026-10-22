@@ -1,7 +1,7 @@
 {
   "name": "mf-mpanel",
   "private": true,
-  "version": "2.14.15",
+  "version": "2.14.17",
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",

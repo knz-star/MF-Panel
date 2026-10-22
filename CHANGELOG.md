@@ -1,3 +1,9 @@
+## 2.14.16 — Faster Link Management deletion
+- Replaced one-request-per-link deletion with batched Supabase deletes (up to 200 IDs per request) and bounded parallel processing.
+- Verifies deletion in batches and preserves IDs of records that remain or cannot be verified.
+- Updates the visible list locally after verification instead of reloading every profile and post after deletion.
+- No Android app changes and no database schema migration required.
+
 # Changelog
 
 ## 2.14.10
@@ -104,3 +110,7 @@ Migrations 1–7 are live. Extra fixes made while applying: `mfp_ensure_profile`
 - Verified requires exactly three URLs in a dedicated modal; Invalid uses a required note modal; Blocked offers PTA/Platform choices and stores the choice as a generated note.
 - Admin Link Management now shows workflow status and downloads Invalid and Blocked links separately as text files.
 - Android app source unchanged. Production build and deployment remain unverified because npm install timed out.
+
+## 2.14.17
+- Added visible Admin Dashboard shortcuts for System Tests and System Test Reset / Workflow Review & Reset.
+- Removed System Tests from the mobile More menu so the dashboard is the primary shortcut location.

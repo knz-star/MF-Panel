@@ -65,7 +65,7 @@ export const AppLayout: React.FC = () => {
   const isActive = (item: NavItem) => location.pathname === item.path || (item.path !== homePath && location.pathname.startsWith(item.path + '/'));
   const handleLogout = async () => { await logout(); navigate('/login', { replace: true }); };
   const visibleBottom = isAdmin ? adminNav.slice(0, 3) : isTeamAdmin ? teamNav[primaryTeam].slice(0, 2) : allNav.slice(0, 4);
-  const moreItems = isAdmin ? adminNav.slice(3) : isTeamAdmin ? managerNav.filter(item => !visibleBottom.some(v => v.path === item.path)) : allNav.slice(4);
+  const moreItems = isAdmin ? adminNav.slice(3).filter(item => item.path !== '/admin/tests') : isTeamAdmin ? managerNav.filter(item => !visibleBottom.some(v => v.path === item.path)) : allNav.slice(4);
   const NavLink = ({ item, compact = false }: { item: NavItem; compact?: boolean }) => { const Icon = item.icon; return <Link key={item.path} to={item.path} onClick={() => setMoreOpen(false)} aria-current={isActive(item) ? 'page' : undefined} className={`${compact ? 'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm' : 'mf-bottom-item'} ${isActive(item) ? (compact ? 'bg-blue-50 text-blue-800 font-semibold' : 'is-active') : (compact ? 'text-slate-600 hover:bg-slate-50' : '')}`}><Icon className={compact ? 'h-4 w-4 shrink-0' : 'h-[23px] w-[23px]'} strokeWidth={isActive(item) ? 2.4 : 1.8}/><span className={compact ? '' : 'mf-bottom-label'}>{item.name}</span>{!compact && isActive(item) && <span className="mf-active-dot"/>}</Link>; };
 
   return <div className="mf-app-shell min-h-screen text-slate-900"><ToastHost />

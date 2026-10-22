@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   History,
   Activity,
+  RotateCcw,
   ArrowRight,
 } from 'lucide-react';
 import { listProfiles } from '../../services/profileService';
@@ -114,6 +115,7 @@ export const AdminDashboard: React.FC = () => {
         </div>
         <div className="flex flex-wrap items-center gap-2">
         <Link to="/admin/tests" className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-4 py-2.5 text-xs font-semibold text-blue-800 shadow-sm transition hover:bg-blue-100"><Activity className="h-3.5 w-3.5" /> Run System Tests</Link>
+        <Link to="/admin/workflow-control" className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-semibold text-rose-800 shadow-sm transition hover:bg-rose-100"><RotateCcw className="h-3.5 w-3.5" /> System Test Reset</Link>
         <Link to="/admin/assets" className="inline-flex items-center gap-1.5 rounded-full bg-slate-950 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800">
           <Settings className="h-3.5 w-3.5" /> Manage Landing Assets
         </Link>
