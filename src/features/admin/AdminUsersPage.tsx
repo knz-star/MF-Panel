@@ -32,7 +32,7 @@ export const AdminUsersPage: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const allUsers = await listAllUsers(100);
+      const allUsers = await listAllUsers(1000);
       setUsers(allUsers);
     } catch (err) {
       console.error('Could not load admin user registry:', err);
@@ -140,17 +140,17 @@ export const AdminUsersPage: React.FC = () => {
           <div className="grid h-10 w-10 place-items-center rounded-2xl bg-blue-50 text-blue-700"><Shield className="h-5 w-5" /></div>
           <div>
             <h2 className="text-sm font-semibold text-slate-900">Authorized administrators</h2>
-            <p className="text-xs text-slate-500">Loaded from the current user records</p>
+            <p className="text-xs text-slate-500">Includes senior admins and active team-admin roles from user records</p>
           </div>
-          <span className="ml-auto rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">{users.filter((u) => u.role === 'ADMIN').length}</span>
+          <span className="ml-auto rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">{users.filter((u) => u.role === 'ADMIN' || u.role === 'TEAM_ADMIN').length}</span>
         </div>
-        {users.filter((u) => u.role === 'ADMIN').length ? (
+        {users.filter((u) => u.role === 'ADMIN' || u.role === 'TEAM_ADMIN').length ? (
           <div className="grid gap-2 sm:grid-cols-2">
-            {users.filter((u) => u.role === 'ADMIN').map((adminUser) => (
+            {users.filter((u) => u.role === 'ADMIN' || u.role === 'TEAM_ADMIN').map((adminUser) => (
               <div key={adminUser.uid} className="flex min-w-0 items-center gap-3 rounded-2xl border border-slate-100 bg-white p-3">
                 <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-blue-50 text-xs font-bold text-blue-700">{(adminUser.displayName || adminUser.email || 'A').slice(0, 1).toUpperCase()}</div>
                 <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-slate-800">{adminUser.displayName || 'Administrator'}</p><p className="truncate text-xs text-slate-500">{adminUser.email}</p></div>
-                <span className="rounded-full bg-blue-50 px-2 py-1 text-[10px] font-semibold text-blue-700">Admin</span>
+                <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${adminUser.role === 'TEAM_ADMIN' ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700'}`}>{adminUser.role === 'TEAM_ADMIN' ? `Team Admin${adminUser.team ? ` · ${adminUser.team}` : ''}` : 'Senior Admin'}</span>
               </div>
             ))}
           </div>
