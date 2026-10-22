@@ -62,7 +62,9 @@ export const SearchingProfilesPage: React.FC = () => {
     }
   };
 
+  const searchingStageStatuses = new Set(['SEARCHED', 'QUEUED_CHECKING', 'NEEDS_REVIEW', 'DUPLICATE', 'INVALID']);
   const filtered = profiles.filter((p) => {
+    if (!searchingStageStatuses.has(String(p.currentWorkflowStatus || '').toUpperCase())) return false;
     const query = searchQuery.toLowerCase();
     const matchesSearch =
       !searchQuery ||
@@ -146,9 +148,9 @@ export const SearchingProfilesPage: React.FC = () => {
             <option value="ALL">All Statuses</option>
             <option value="SEARCHED">Searched (Pending Handoff)</option>
             <option value="QUEUED_CHECKING">Queued Checking</option>
-            <option value="CHECKING">In Checking</option>
-            <option value="VERIFIED">Verified</option>
-            <option value="FAILED_BLOCKED">Failed / Blocked</option>
+            <option value="NEEDS_REVIEW">Needs Admin Review</option>
+            <option value="DUPLICATE">Duplicate</option>
+            <option value="INVALID">Invalid link</option>
           </select>
         </div>
       </div>
@@ -232,7 +234,7 @@ export const SearchingProfilesPage: React.FC = () => {
                             : 'bg-slate-100 text-slate-700'
                         }`}
                       >
-                        {p.currentWorkflowStatus}
+                        {p.currentWorkflowStatus === 'QUEUED_CHECKING' ? 'Sent to Checking' : p.currentWorkflowStatus === 'SEARCHED' ? 'New link' : p.currentWorkflowStatus === 'NEEDS_REVIEW' ? 'Admin review' : p.currentWorkflowStatus}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-right">

@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { BadgeCheck, Mail, Save, ShieldCheck, UserRound, RefreshCw, Activity, AlertTriangle } from 'lucide-react';
+import { BadgeCheck, Mail, Save, ShieldCheck, UserRound, RefreshCw, Activity, AlertTriangle, Download } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { db, doc, updateDoc, getDoc } from '../../lib/supabaseDocumentStore';
 import type { TeamKey } from '../../types/user';
 import { getMyTeamScore, type MyTeamScore } from '../../services/teamAnalyticsService';
 import { notify } from '../../utils/toast';
+import { downloadUserPledgePdf } from '../../services/pledgePdfService';
 
 const workspaceLabels: Record<TeamKey, string> = {
   searching: 'Searching Team',
@@ -21,6 +22,8 @@ export const ProfilePage: React.FC = () => {
   const [scoreDays, setScoreDays] = useState<7|14>(7);
   const [scoreData, setScoreData] = useState<MyTeamScore|null>(null);
   const [scoreError, setScoreError] = useState('');
+  const [pledgeDownloading, setPledgeDownloading] = useState(false);
+  const [pledgeMessage, setPledgeMessage] = useState('');
   useEffect(() => { let alive=true; const load=async()=>{try{const result=await getMyTeamScore(scoreDays);if(alive){setScoreData(result);setScoreError('');}}catch(e){if(alive)setScoreError(e instanceof Error?e.message:'Score is not available yet.');}};void load();const timer=window.setInterval(()=>void load(),30000);return()=>{alive=false;window.clearInterval(timer);}; },[scoreDays]);
 
   useEffect(() => setDisplayName(userProfile?.displayName ?? ''), [userProfile?.displayName]);
@@ -77,6 +80,14 @@ export const ProfilePage: React.FC = () => {
         </section>
 
         {message && <div role={message.kind === 'error' ? 'alert' : 'status'} className={`mt-5 rounded-xl border p-3 text-sm ${message.kind === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-rose-200 bg-rose-50 text-rose-700'}`}>{message.text}</div>}
+        <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div><h3 className="text-sm font-bold text-slate-900">My signed pledge</h3><p className="mt-1 text-xs leading-5 text-slate-500">Download a copy of your submitted pledge at any time. This does not change its saved status.</p></div>
+            <button type="button" onClick={async () => { if (!userProfile || !currentUser) return; setPledgeDownloading(true); setPledgeMessage(''); try { await downloadUserPledgePdf({ ...userProfile, uid: currentUser.uid, email: currentUser.email || userProfile.email }); setPledgeMessage('Your pledge PDF has been generated.'); } catch (e) { setPledgeMessage(e instanceof Error ? e.message : 'Pledge PDF could not be generated.'); } finally { setPledgeDownloading(false); } }} disabled={pledgeDownloading || !userProfile?.pledgeAccepted || !userProfile?.pledgeSignature?.trim()} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"><Download className="h-4 w-4"/>{pledgeDownloading ? 'Preparing PDF…' : 'Download my pledge PDF'}</button>
+          </div>
+          {pledgeMessage && <p role="status" className="mt-3 text-xs text-slate-600">{pledgeMessage}</p>}
+          {!userProfile?.pledgeAccepted && <p className="mt-2 text-xs text-amber-700">No submitted pledge is recorded on this account yet.</p>}
+        </section>
 
         <form onSubmit={(event) => void save(event)} className="mt-6 space-y-5">
           <div>
