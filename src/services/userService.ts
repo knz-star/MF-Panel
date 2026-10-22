@@ -220,6 +220,11 @@ export async function listAllUsers(limitCount = 100): Promise<UserProfile[]> {
         allowedModules: Array.isArray(row.allowed_modules) ? row.allowed_modules as ModuleKey[] : current?.allowedModules ?? [],
         createdAt: row.created_at ?? current?.createdAt,
         updatedAt: row.updated_at ?? current?.updatedAt,
+        // Pledge submissions are stored in canonical preferences by mfp_save_pledge.
+        // Omitting this mapping made every freshly submitted pledge look missing in Admin UI.
+        pledgeAccepted: row.preferences?.pledgeAccepted === true || row.preferences?.pledge_accepted === true || current?.pledgeAccepted === true,
+        pledgeSignature: row.preferences?.pledgeSignature ?? row.preferences?.pledge_signature ?? current?.pledgeSignature,
+        pledgeAcceptedAt: row.preferences?.pledgeAcceptedAt ?? row.preferences?.pledge_accepted_at ?? current?.pledgeAcceptedAt,
       };
       localStore.upsertUser(mapped);
     }

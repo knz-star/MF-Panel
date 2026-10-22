@@ -28,6 +28,7 @@ import {
 } from '../utils/matchingEngine';
 import { listProfiles } from './profileService';
 import { listAllPosts } from './postService';
+import { supabase } from '../lib/supabase';
 
 const JOBS_COLLECTION = 'reportJobs';
 const PACKAGES_COLLECTION = 'reportPackages';
@@ -230,6 +231,52 @@ export async function analyzeUploadedZip(
       screenshot.status = 'NEEDS_REVIEW';
       screenshot.reviewNote = [screenshot.reviewNote, 'Duplicate SHA-256 checksum: this image is byte-identical to another screenshot in the manifest.'].filter(Boolean).join(' ');
     }
+  }
+
+  // 5b. Reconcile the ZIP against assigned links and persist IDs/metadata only.
+  // Screenshot image bytes stay in the uploaded ZIP/browser memory and are never sent to Supabase.
+  const manifestLinks = batchManifest?.links ?? [];
+  const metadataRecords = manifestLinks.map((link, linkIndex) => {
+    const matchedUrl = extractedUrls.find((item) => item.batchLinkId === link.linkId || normalizeForMatch(item.originalUrl) === normalizeForMatch(link.url));
+    const actualShots = extractedScreenshots.filter((shot) => shot.batchLinkId === link.linkId || (matchedUrl?.matchedProfileId && shot.matchedProfileId === matchedUrl.matchedProfileId));
+    const declaredShots = (link.screenshots ?? []).map((shot, shotIndex) => ({
+      screenshotId: shot.screenshotId || shot.screenshot_id || shot.id || link.screenshotIds?.[shotIndex] || `SHOT-${jobId}-${linkIndex + 1}-${shotIndex + 1}`,
+      fileName: shot.fileName,
+      capturedAt: shot.capturedAt,
+      sha256Checksum: shot.sha256Checksum,
+    }));
+    const shots = declaredShots.length ? declaredShots : (link.screenshotIds?.length
+      ? link.screenshotIds.map((screenshotId) => ({ screenshotId, fileName: '' }))
+      : actualShots.map((shot, shotIndex) => ({
+          screenshotId: `SHOT-${jobId}-${linkIndex + 1}-${shotIndex + 1}`,
+          fileName: shot.filename,
+          capturedAt: shot.capturedAt,
+          sha256Checksum: shot.sha256Checksum,
+        })));
+    // Carry the canonical screenshot IDs into the in-memory manifest so the downloadable report JSON
+    // and the database reference the same IDs, even when the source ZIP did not include them.
+    link.screenshotIds = [...new Set([...(link.screenshotIds ?? []), ...shots.map((shot) => shot.screenshotId).filter((id): id is string => Boolean(id))])];
+    const postIds = [...new Set([...(link.postIds ?? []), ...(matchedUrl?.matchedPostId ? [matchedUrl.matchedPostId] : [])].filter(Boolean))];
+    return {
+      linkId: link.linkId,
+      url: link.url,
+      sourceProfileId: link.sourceProfileId || link.profileId,
+      profileId: matchedUrl?.matchedPublicProfileId || matchedUrl?.matchedProfileId || link.profileId,
+      mfpProfileId: link.mfpProfileId || matchedUrl?.matchedPublicProfileId,
+      postIds,
+      screenshots: shots,
+      verificationStatus: matchedUrl?.status === 'MATCHED' ? 'NEEDS_REVIEW' : 'MISMATCH',
+      verificationNotes: matchedUrl?.status === 'MATCHED' ? 'Assigned URL matched; screenshot evidence remains subject to review.' : 'URL did not match a known workflow profile; review required.',
+    };
+  }).filter((record) => /^https?:\/\//i.test(record.url));
+  if (metadataRecords.length) {
+    const { data: metadataResult, error: metadataError } = await supabase.rpc('mfp_evidence_zip_metadata', {
+      p_action: 'ingest',
+      p_payload: { reportJobId: jobId, records: metadataRecords },
+    });
+    if (metadataError) throw new Error(`ZIP analyzed, but evidence ID reconciliation could not be saved: ${metadataError.message}`);
+    if (metadataResult && typeof metadataResult === 'object' && 'error' in metadataResult) throw new Error(String((metadataResult as Record<string, unknown>).error));
+    console.info('[MF MPanel] Evidence metadata reconciled:', metadataResult);
   }
 
   // 6. Calculate statistics
@@ -447,6 +494,21 @@ export async function buildAndDownloadReportPackage(params: {
     folders: folderSummaries,
     screenshotsPdfParts: pdfParts.map(({ fileName, pageCount }) => ({ fileName, pageCount })),
     processingOutcome: job.reviewRequiredCount > 0 ? 'GENERATED_WITH_REVIEW_ITEMS' : 'SUCCESSFUL',
+    links: eligibleLinks.map((link) => {
+      const relatedShots = matchedScreenshots.filter((shot) => shot.batchLinkId === link.batchLinkId || (link.matchedProfileId && shot.matchedProfileId === link.matchedProfileId));
+      const source = batchManifest?.links.find((item) => item.linkId === link.batchLinkId);
+      return {
+        linkId: link.batchLinkId || link.id,
+        url: link.originalUrl,
+        profileId: link.matchedPublicProfileId || link.matchedProfileId || source?.profileId,
+        sourceProfileId: source?.sourceProfileId || source?.profileId,
+        mfpProfileId: link.matchedPublicProfileId,
+        postIds: [...new Set([...(source?.postIds ?? []), ...(link.matchedPostId ? [link.matchedPostId] : [])])],
+        postLinks: source?.postLinks?.map((post) => ({ postId: post.postId || post.internalPostId || '', url: post.url })) ?? [],
+        screenshotIds: [...new Set([...(source?.screenshotIds ?? []), ...(source?.screenshots ?? []).map((shot) => shot.screenshotId || shot.screenshot_id || shot.id || '').filter(Boolean), ...relatedShots.map((shot, shotIndex) => `SHOT-${job.jobId}-${Math.max(1, eligibleLinks.findIndex((item) => item.batchLinkId === link.batchLinkId) + 1)}-${shotIndex + 1}`)])],
+        verificationStatus: link.status === 'MATCHED' && relatedShots.every((shot) => shot.status === 'MATCHED' && !shot.duplicateChecksum) ? 'NEEDS_REVIEW' as const : 'MISMATCH' as const,
+      };
+    }),
   };
   const manifestJson = JSON.stringify(manifest, null, 2);
   physicalZip.file('report-manifest.json', manifestJson);

@@ -8,9 +8,28 @@ export interface EvidenceRegistration { id?: string; userId: string; teamId: str
 function mapRegistration(row: any): EvidenceRegistration | null {
   return row ? { id: row.id, userId: row.user_id, teamId: row.team_id ?? '', applicationId: row.application_id, status: row.status, activationStatus: row.activation_status, userVerified: row.user_verified, teamAuthorized: row.team_authorized, deviceLabel: row.device_label, linkedAt: row.linked_at, lastSeenAt: row.last_seen_at, revokedAt: row.revoked_at } : null;
 }
-export const createPairing = () => call<Record<string, never>, PairingResult>('createEvidencePairing', {});
+/**
+ * Creates a pairing code and mirrors it into the legacy table the installed Android app validates against.
+ * If the mirror step fails, the new request is cancelled so the user never sees a code the app would reject as invalid.
+ */
+export async function createPairing(): Promise<PairingResult> {
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const result = await call<Record<string, never>, PairingResult>('createEvidencePairing', {});
+    const { error } = await supabase.rpc('mfp_sync_legacy_pairing_code', { p_request_id: result.requestId, p_code: result.code, p_action: 'create' });
+    if (!error) return result;
+    lastError = error;
+    await call<{ requestId: string }, { success: boolean }>('cancelEvidencePairing', { requestId: result.requestId }).catch(() => undefined);
+    if (!/collision/i.test(error.message || '')) break;
+  }
+  console.error('Legacy pairing mirror failed', lastError);
+  throw new Error('Pairing code could not be prepared for the Evidence app. Please try again in a moment.');
+}
 export const redeemPairing = (code: string, deviceLabel = 'Android device') => call<{code:string;deviceLabel:string},{success:boolean;registrationId:string;status:string}>('redeemEvidencePairing', { code, deviceLabel });
-export const cancelPairing = (requestId: string) => call<{requestId:string}, {success:boolean}>('cancelEvidencePairing', { requestId });
+export const cancelPairing = (requestId: string, code?: string) => {
+  if (code) void supabase.rpc('mfp_sync_legacy_pairing_code', { p_request_id: requestId, p_code: code, p_action: 'cancel' }).then(({ error }) => { if (error) console.warn('Legacy pairing cancel failed', error.message); });
+  return call<{requestId:string}, {success:boolean}>('cancelEvidencePairing', { requestId });
+};
 export const disconnectEvidence = (userId?: string) => call<{userId?:string}, {success:boolean}>('disconnectEvidenceApp', userId ? {userId} : {});
 export function watchEvidenceRegistration(uid: string, callback: (registration: EvidenceRegistration | null) => void, onError: (error: Error) => void): Unsubscribe {
   let active = true;
