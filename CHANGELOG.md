@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.14.10
+- Pairing: website codes are mirrored into legacy `pairing_codes` (new RPC `mfp_sync_legacy_pairing_code`, applied to production) so the installed Android app no longer says "invalid". If the mirror fails the request is cancelled and the user sees an error instead of a dead code.
+- Auth: existing-email signup no longer claims an email was sent (neutral, non-enumerating message + resend button); login/signup/forgot use one Roman-Urdu error mapper (`src/utils/authErrors.ts`) with a support ref for unexpected errors.
+- Auth: new `/reset-password` page (expired/used link handling, new password form); reset email now redirects there instead of `/login`.
+- NOT build-verified: sandbox had no npm registry access.
+
+## 2.14.9
+- Organization/team and gender-group reports now download as premium A4 PDF (was JSON).
+- Pledge PDF redesigned: framed A4 layout, header band, reference ID, declarant card, signature blocks.
+- New shared renderer: src/utils/pdfReport.ts (Urdu-safe canvas pages embedded via pdf-lib).
+- NOT build-verified: sandbox had no npm registry access.
+
+
 ## 2.14.8
 - Live backend: member Activity Score uses actual work in the rolling 24-hour window (10 points per submitted/checked/completed link, capped at 100).
 - Live team analytics RPC restricts non-senior admins to their own gender group within their assigned functional team. Senior ADMIN remains organization-wide.
@@ -69,3 +82,10 @@ Migrations 1–7 are live. Extra fixes made while applying: `mfp_ensure_profile`
 - Persisted pledge layout settings and applied them to the generated one-page pledge PDF, with dynamic text wrapping and font reduction to fit the available body area.
 - Added a two-minute warm-profile cooldown after successful profile hydration to prevent repeated profile/RPC checks when mobile file pickers suspend and resume the browser. This does not bypass Supabase Auth or change server-side authorization.
 - Enabled promotion to TEAM_ADMIN from User Management and clarified the follow-up team-lead assignment flow. Team Analytics now shows the current senior admin as a disabled option with an explanation rather than silently hiding all admin choices.
+
+## 2.14.12 — Admin pledge export and reliability fixes
+- Added per-user admin download for submitted signed pledge PDFs from the User & Role Management table and user detail panel.
+- Fixed a data-mapping bug: the admin user-list RPC already returned canonical `preferences`, but the frontend discarded pledge acceptance/signature/timestamp fields. Freshly submitted pledges now appear as submitted and become downloadable.
+- Pledge PDF generation uses the saved signature and submission timestamp, carries the user ID/email for attribution, and falls back to the standard pledge text if document settings are unavailable.
+- Improved admin user-list loading failures with a visible actionable message instead of failing silently.
+- Versioned the package as 2.14.12. Production build/browser performance verification is still required after dependency installation and deployment.

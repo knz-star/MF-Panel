@@ -25,3 +25,12 @@ assert.match(reports,/jobId=/,'Report jobs open a job-specific analysis route');
 console.log('PASS: MF MPanel acceptance source smoke tests');
 
 assert.match(router,/path: '\/admin\/global-tracker'[\s\S]*?GlobalTrackerPage/,'Global Tracker route is registered');
+const userService=read('../services/userService.ts');
+const adminUsers=read('../features/admin/AdminUsersPage.tsx');
+const pledgePdf=read('../services/pledgePdfService.ts');
+assert.match(userService,/pledgeAccepted: row\.preferences\?\.pledgeAccepted/,'Admin user listing maps canonical pledge acceptance');
+assert.match(userService,/pledgeSignature: row\.preferences\?\.pledgeSignature/,'Admin user listing maps canonical pledge signature');
+assert.match(adminUsers,/Download signed pledge PDF/,'Admin can download a signed pledge from user detail');
+assert.match(adminUsers,/handleDownloadPledge\(u\)/,'Admin user table offers pledge download action');
+assert.match(pledgePdf,/pdf\.setTitle/,'Pledge PDF is generated with identifying document metadata');
+console.log('PASS: admin pledge download regression checks');

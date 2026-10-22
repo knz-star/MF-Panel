@@ -101,6 +101,7 @@ export interface ReportPackageManifest {
     linksCount: number;
     screenshotsCount: number;
   }[];
+  links?: Array<{ linkId: string; url: string; profileId?: string; sourceProfileId?: string; mfpProfileId?: string; postIds: string[]; postLinks: Array<{ postId: string; url: string }>; screenshotIds: string[]; verificationStatus: 'VERIFIED' | 'NEEDS_REVIEW' | 'MISMATCH' }>; 
   screenshotsPdfParts?: Array<{ fileName: string; pageCount: number }>;
   processingOutcome: string;
 }
@@ -117,7 +118,10 @@ export interface EvidenceBatchManifest {
   totalScreenshots?: number;
   encryptionAlgorithm?: string;
   links: Array<{
-    linkId: string; url: string; platform?: string; profileId?: string; requiredCount?: number; requiredScreenshots?: number; actualCount?: number; status?: string; notes?: string;
-    screenshots?: Array<{ screenshotId?: string; fileName: string; capturedAt?: number; fileSizeBytes?: number; sha256Checksum?: string; mimeType?: string }>;
+    linkId: string; url: string; platform?: string; profileId?: string; sourceProfileId?: string; mfpProfileId?: string; requiredCount?: number; requiredScreenshots?: number; actualCount?: number; status?: string; notes?: string;
+    postIds?: string[];
+    postLinks?: Array<{ postId?: string; internalPostId?: string; url: string; platform?: string }>;
+    screenshotIds?: string[];
+    screenshots?: Array<{ screenshotId?: string; screenshot_id?: string; id?: string; fileName: string; capturedAt?: number; fileSizeBytes?: number; sha256Checksum?: string; mimeType?: string }>;
   }>;
 }

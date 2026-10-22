@@ -70,3 +70,12 @@ QA note: source syntax transpilation passed for all 82 TypeScript/TSX/JS source 
 ### v2.14.8 backend status
 
 Migration `20261021062000_mfp_gender_scoped_activity_score.sql` is applied to the connected Supabase project. Member Activity Score uses actual work in the rolling 24-hour window (10 points per link action, capped at 100). Senior ADMIN remains global; team analytics restricts Team Admin results to the assigned team and admin gender group. This does not certify gender isolation across every workflow RPC and does not yet provide the final per-functional-team Male/Female admin assignment UI.
+
+
+## v2.14.11 — Evidence ZIP identity tracking
+
+- Global Tracker now reads the authorized screenshot-ID metadata ledger and displays screenshot IDs, related link/profile/post IDs, verification status, and the original assignee.
+- Evidence ZIP reconciliation checks uploaded URLs against reserved assignments and attributes records to the user who originally received each assignment, not the administrator uploading the ZIP.
+- The database stores screenshot IDs and evidence metadata only; screenshot image bytes are not uploaded by the reconciliation RPC.
+- Evidence assignment JSON includes available related post IDs and post URLs.
+- Supabase migration: `20261022021800_mfp_evidence_zip_identity_tracking.sql`.
