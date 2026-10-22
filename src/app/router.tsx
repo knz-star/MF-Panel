@@ -9,6 +9,7 @@ import { LandingPage } from '../features/landing/LandingPage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { SignupPage } from '../features/auth/SignupPage';
 import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage';
+import { ResetPasswordPage } from '../features/auth/ResetPasswordPage';
 import { PendingApprovalPage } from '../features/auth/PendingApprovalPage';
 import { PledgePage } from '../features/auth/PledgePage';
 import { AdminLinksPage } from '../features/admin/AdminLinksPage';
@@ -68,6 +69,10 @@ export const router = createBrowserRouter([
   {
     path: '/forgot-password',
     element: <ForgotPasswordPage />,
+  },
+  {
+    path: '/reset-password',
+    element: <ResetPasswordPage />,
   },
   {
     path: '/pledge',

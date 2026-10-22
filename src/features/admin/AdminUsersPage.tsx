@@ -9,10 +9,12 @@ import {
   Save,
   X,
   Lock,
+  Download,
 } from 'lucide-react';
 import { listAllUsers, updateUserRoleAndModules } from '../../services/userService';
 import { useAuth } from '../auth/AuthContext';
 import { UserProfile, UserRole, AccountStatus, TeamKey } from '../../types/user';
+import { downloadUserPledgePdf } from '../../services/pledgePdfService';
 
 export const AdminUsersPage: React.FC = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -23,6 +25,7 @@ export const AdminUsersPage: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<AccountStatus>('PENDING');
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [downloadingPledgeUid, setDownloadingPledgeUid] = useState<string | null>(null);
 
   const { currentUser } = useAuth();
 
@@ -32,7 +35,8 @@ export const AdminUsersPage: React.FC = () => {
       const allUsers = await listAllUsers(100);
       setUsers(allUsers);
     } catch (err) {
-      console.error(err);
+      console.error('Could not load admin user registry:', err);
+      setMessage(err instanceof Error ? `Could not load users: ${err.message}` : 'Could not load users. Check your connection and admin access.');
     } finally {
       setLoading(false);
     }
@@ -49,6 +53,24 @@ export const AdminUsersPage: React.FC = () => {
     setSelectedTeam(user.role === 'ADMIN' ? '' : (user.team && teamOptions.includes(user.team) ? user.team : (user.allowedModules ?? []).find((m): m is TeamKey => teamOptions.includes(m as TeamKey)) ?? ''));
     setSelectedStatus(user.accountStatus || 'PENDING');
     setMessage(null);
+  };
+
+  const handleDownloadPledge = async (user: UserProfile) => {
+    if (!user.pledgeAccepted || !user.pledgeSignature?.trim()) {
+      setMessage(`${user.displayName || user.email || 'This user'} has not submitted a signed pledge yet.`);
+      return;
+    }
+    setDownloadingPledgeUid(user.uid);
+    setMessage(null);
+    try {
+      await downloadUserPledgePdf(user);
+      setMessage(`Pledge PDF generated for ${user.displayName || user.email || user.uid}.`);
+    } catch (error) {
+      console.error('Admin pledge download failed:', error);
+      setMessage(error instanceof Error ? `Pledge download failed: ${error.message}` : 'Pledge PDF could not be generated. Please retry.');
+    } finally {
+      setDownloadingPledgeUid(null);
+    }
   };
 
   const handleRoleChange = (role: UserRole) => { setSelectedRole(role); };
@@ -162,6 +184,7 @@ export const AdminUsersPage: React.FC = () => {
             </div>
             <p className="text-xs text-slate-600">Signature: <span className="font-semibold text-slate-900">{editingUser.pledgeSignature?.trim() || 'Not available'}</span></p>
             <p className="text-xs text-slate-600">Submitted at: <span className="font-medium text-slate-900">{editingUser.pledgeAcceptedAt ? new Date(editingUser.pledgeAcceptedAt).toLocaleString() : 'Not available'}</span></p>
+            <button type="button" onClick={() => void handleDownloadPledge(editingUser)} disabled={!editingUser.pledgeAccepted || !editingUser.pledgeSignature?.trim() || downloadingPledgeUid === editingUser.uid} className="mt-2 inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"><Download className="h-4 w-4" />{downloadingPledgeUid === editingUser.uid ? 'Preparing PDF…' : 'Download signed pledge PDF'}</button>
             <p className="text-[11px] leading-5 text-slate-500">Use this information as a review aid. Approval status is controlled separately below; this panel does not change the submitted pledge.</p>
           </section>
 
@@ -291,6 +314,7 @@ export const AdminUsersPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-right">
+                      <button type="button" onClick={() => void handleDownloadPledge(u)} disabled={!u.pledgeAccepted || !u.pledgeSignature?.trim() || downloadingPledgeUid === u.uid} className="mr-1 inline-flex items-center gap-1 rounded px-2 py-1.5 text-slate-600 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-30" title={u.pledgeAccepted ? 'Download this user’s signed pledge PDF' : 'No submitted pledge'} aria-label={`Download pledge for ${u.displayName || u.email}`}><Download className="h-3.5 w-3.5" /></button>
                       <button
                         type="button"
                         onClick={() => handleStartEdit(u)}
