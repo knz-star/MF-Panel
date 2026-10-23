@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Activity, Archive, Camera, RefreshCw, Smartphone, Settings2, Workflow, Save, ShieldAlert } from 'lucide-react';
-import { invokeWebsiteApi } from '../../services/webApiClient';
+import { Activity, Archive, Camera, RefreshCw, Smartphone, Settings2, Workflow, Save, ShieldAlert, KeyRound, Sparkles } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 type Row = Record<string, unknown>;
@@ -20,7 +19,8 @@ export const AdminEvidenceOperationsPage: React.FC = () => {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [zipPassword, setZipPassword] = useState('');
+  const [zipCodes, setZipCodes] = useState<Array<{label:string;password:string}>>(Array.from({length:5},(_,i)=>({label:`Code ${i+1}`,password:''})));
+  const [generatingCodes, setGeneratingCodes] = useState(false);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState('');
 
@@ -28,10 +28,11 @@ export const AdminEvidenceOperationsPage: React.FC = () => {
     setLoading(true); setError(''); setNotice('');
     try {
       if (tab === 'settings') {
-        const data = await invokeWebsiteApi<any>('mfp-admin-export-settings', { action: 'read' });
-        if (data?.error) throw new Error(String(data.error));
-        setZipPassword('');
-        setRows(data ? [{ key: 'export_settings', value: { configured: Boolean(data?.configured) } }] : []);
+        const { data, error: e } = await supabase.rpc('mfp_get_evidence_zip_passwords');
+        if (e) throw e;
+        const saved = Array.isArray(data) ? data : [];
+        setZipCodes(Array.from({length:5},(_,i)=>({label:String(saved[i]?.label || `Code ${i+1}`),password:String(saved[i]?.password || '')}))); 
+        setRows([{ key: 'export_settings', value: { configured: saved.filter((x:any)=>typeof x?.password==='string'&&x.password.length>0).length===5 } }]);
       } else {
         const source = tabs.find(t => t.id === tab)?.table;
         if (!source) return;
@@ -49,13 +50,27 @@ export const AdminEvidenceOperationsPage: React.FC = () => {
   const saveSettings = async () => {
     setSaving(true); setError(''); setNotice('');
     try {
-      if (!zipPassword.trim()) throw new Error('ZIP password cannot be empty.');
-      const data = await invokeWebsiteApi<any>('mfp-admin-export-settings', { action: 'write', zip_password: zipPassword.trim() });
-      if (data?.error) throw new Error(String(data.error));
-      setNotice('Export setting saved through the authenticated administrator database operation.');
+      if (zipCodes.length !== 5 || zipCodes.some(c=>!c.label.trim() || c.password.trim().length<8 || c.password.trim().length>128)) throw new Error('Fill all five code slots. Each label is required and every password must be 8–128 characters.');
+      if (new Set(zipCodes.map(c=>c.password.trim())).size !== 5) throw new Error('All five ZIP codes must be unique.');
+      const { data, error: e } = await supabase.rpc('mfp_admin_set_evidence_zip_passwords', { p_codes: zipCodes.map(c=>({label:c.label.trim(),password:c.password.trim()})) });
+      if (e) throw e;
+      if ((data as any)?.success !== true) throw new Error('Supabase did not confirm that the five codes were saved.');
       await refresh();
-    } catch (e) { setError((e as { message?: string })?.message || 'Could not save export settings.'); }
+      setNotice('All five ZIP codes saved securely in Supabase. Analysis will test them one by one and record the matching slot for each ZIP.');
+    } catch (e) { setError((e as { message?: string })?.message || 'Could not save ZIP codes. Apply the five-code Supabase migration and confirm active Admin access.'); }
     finally { setSaving(false); }
+  };
+
+  const generateCodes = async () => {
+    setGeneratingCodes(true); setError(''); setNotice('');
+    try {
+      const { data, error: e } = await supabase.rpc('mfp_admin_generate_evidence_zip_passwords');
+      if (e) throw e;
+      if (!Array.isArray(data) || data.length !== 5) throw new Error('Supabase did not return exactly five codes.');
+      setZipCodes(data.map((c:any,i:number)=>({label:String(c.label||`Code ${i+1}`),password:String(c.password||'')})));
+      setNotice('Supabase generated five unique codes. Review or replace any slot with your own custom code, then press Save five codes.');
+    } catch (e) { setError((e as { message?: string })?.message || 'Could not generate codes. Apply the five-code Supabase migration first.'); }
+    finally { setGeneratingCodes(false); }
   };
 
   const columns = tab === 'workItems'
@@ -75,6 +90,6 @@ export const AdminEvidenceOperationsPage: React.FC = () => {
     </section>
     {error && <div role="alert" className="flex gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800"><ShieldAlert className="mt-0.5 h-4 w-4 shrink-0"/>{error}</div>}
     {notice && <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</div>}
-    {tab === 'settings' ? <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><h3 className="font-bold text-slate-900">Private website ZIP export setting</h3><p className="mt-1 text-sm text-slate-500">This value is stored in a private database table and is not exposed through public config. It does not change the unchanged Android app's legacy export setting.</p><label className="mt-5 block text-sm font-semibold text-slate-700" htmlFor="zip-password">Website ZIP export password</label><input id="zip-password" type="password" autoComplete="new-password" value={zipPassword} onChange={e=>setZipPassword(e.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" placeholder="Enter a new password (the saved value is never shown)"/><div className="mt-4 flex flex-wrap gap-3"><button onClick={()=>void saveSettings()} disabled={saving || loading} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"><Save className="h-4 w-4"/>{saving?'Saving…':'Save setting'}</button><button onClick={()=>void refresh()} className="min-h-11 rounded-xl border px-4 text-sm font-semibold">Reload current value</button></div><p className="mt-4 rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-900">Security note: this website-only setting is private. The unchanged Android app still uses its existing legacy setting; do not assume changing this value changes Android export behavior.</p></section> : <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="flex items-center justify-between border-b border-slate-100 px-4 py-4 sm:px-5"><div><h3 className="font-bold text-slate-900">{tabs.find(t=>t.id===tab)?.label}</h3><p className="mt-1 text-xs text-slate-500">Latest {rows.length} records · maximum 250 per refresh</p></div><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{rows.length} records</span></div>{loading ? <div className="p-10 text-center text-sm text-slate-500">Loading records…</div> : rows.length===0 ? <div className="p-10 text-center"><p className="font-semibold text-slate-700">No records yet</p><p className="mt-1 text-sm text-slate-500">Records appear after the Android app syncs supported metadata to this Supabase project.</p></div> : <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr>{columns.map(c=><th key={c.label} className="whitespace-nowrap px-4 py-3 font-semibold">{c.label}</th>)}<th className="px-4 py-3">Details</th></tr></thead><tbody className="divide-y divide-slate-100">{rows.map((row,i)=><tr key={String(first(row,['id','operation_id','export_id','screenshot_id','user_id'])??i)} className="align-top hover:bg-slate-50/70">{columns.map(c=><td key={c.label} className="max-w-[240px] break-all px-4 py-3 text-slate-700">{pretty(first(row,c.keys))}</td>)}<td className="max-w-[360px] px-4 py-3"><details><summary className="cursor-pointer text-xs font-semibold text-blue-700">View raw metadata</summary><pre className="mt-2 max-w-[360px] overflow-auto rounded-lg bg-slate-950 p-3 text-[10px] leading-4 text-slate-100">{JSON.stringify(row,null,2)}</pre></details></td></tr>)}</tbody></table></div>}</section>}
+    {tab === 'settings' ? <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><h3 className="font-bold text-slate-900">Five ZIP password codes</h3><p className="mt-1 text-sm text-slate-500">Exactly five slots are stored in private Supabase settings. You can generate codes securely on Supabase or replace any slot with your own custom code.</p></div><button onClick={()=>void generateCodes()} disabled={generatingCodes||saving||loading} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 text-sm font-semibold text-indigo-800 disabled:opacity-50"><Sparkles className="h-4 w-4"/>{generatingCodes?'Generating…':'Generate 5 codes'}</button></div><div className="mt-5 space-y-3">{zipCodes.map((code,i)=><div key={i} className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:grid-cols-[minmax(120px,0.8fr)_minmax(0,2fr)]"><div><label className="block text-xs font-semibold text-slate-600" htmlFor={`zip-code-label-${i}`}>Slot {i+1} label</label><input id={`zip-code-label-${i}`} value={code.label} maxLength={40} onChange={e=>setZipCodes(old=>old.map((x,j)=>i===j?{...x,label:e.target.value}:x))} className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm" placeholder={`Code ${i+1}`}/></div><div><label className="block text-xs font-semibold text-slate-600" htmlFor={`zip-code-value-${i}`}>Custom ZIP code / password</label><div className="relative mt-1"><KeyRound className="absolute left-3 top-3.5 h-4 w-4 text-slate-400"/><input id={`zip-code-value-${i}`} type="text" autoComplete="off" spellCheck={false} value={code.password} onChange={e=>setZipCodes(old=>old.map((x,j)=>i===j?{...x,password:e.target.value}:x))} className="min-h-11 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm" placeholder="Enter custom code (8–128 characters)"/></div></div></div>)}</div><div className="mt-4 flex flex-wrap gap-3"><button onClick={()=>void saveSettings()} disabled={saving||loading} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"><Save className="h-4 w-4"/>{saving?'Saving…':'Save five codes'}</button><button onClick={()=>void refresh()} disabled={loading} className="min-h-11 rounded-xl border px-4 text-sm font-semibold">Reload saved codes</button></div><p className="mt-4 rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-900">Codes are visible only to an active senior Admin through the protected RPC so the Admin can use them when creating ZIPs. The Android app source is not changed by this website feature. Generate or edit codes, then save them before ZIP analysis.</p></section> : <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="flex items-center justify-between border-b border-slate-100 px-4 py-4 sm:px-5"><div><h3 className="font-bold text-slate-900">{tabs.find(t=>t.id===tab)?.label}</h3><p className="mt-1 text-xs text-slate-500">Latest {rows.length} records · maximum 250 per refresh</p></div><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{rows.length} records</span></div>{loading ? <div className="p-10 text-center text-sm text-slate-500">Loading records…</div> : rows.length===0 ? <div className="p-10 text-center"><p className="font-semibold text-slate-700">No records yet</p><p className="mt-1 text-sm text-slate-500">Records appear after the Android app syncs supported metadata to this Supabase project.</p></div> : <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr>{columns.map(c=><th key={c.label} className="whitespace-nowrap px-4 py-3 font-semibold">{c.label}</th>)}<th className="px-4 py-3">Details</th></tr></thead><tbody className="divide-y divide-slate-100">{rows.map((row,i)=><tr key={String(first(row,['id','operation_id','export_id','screenshot_id','user_id'])??i)} className="align-top hover:bg-slate-50/70">{columns.map(c=><td key={c.label} className="max-w-[240px] break-all px-4 py-3 text-slate-700">{pretty(first(row,c.keys))}</td>)}<td className="max-w-[360px] px-4 py-3"><details><summary className="cursor-pointer text-xs font-semibold text-blue-700">View raw metadata</summary><pre className="mt-2 max-w-[360px] overflow-auto rounded-lg bg-slate-950 p-3 text-[10px] leading-4 text-slate-100">{JSON.stringify(row,null,2)}</pre></details></td></tr>)}</tbody></table></div>}</section>}
   </div>;
 };

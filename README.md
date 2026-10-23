@@ -110,3 +110,7 @@ Apply `supabase/migrations/20261022030000_mfp_auto_zip_password_and_team_ui.sql`
 - Result actions appear after opening the link. Re-open remains available. Verified opens a modal that requires exactly three profile/post URLs; Invalid opens a required note box; Blocked offers only “By PTA” and “By Platform”, saving the selected reason as a system note without asking the checker to type one.
 - Admin Link Management displays each link’s workflow status and offers separate plain-text downloads for Invalid and Blocked links.
 - Android app source is unchanged. Frontend build and browser tests must be run after dependencies can be installed; this ZIP has not been deployed.
+
+
+### v2.14.18 — Five ZIP code configuration
+The five-code RPC migration, legacy RPC restriction, and Link Management pagination index have already been applied to the connected Supabase project; their SQL migration files are included for version control. In Admin → Evidence Control Center → Export settings, generate five secure codes or enter five unique custom codes, then save. ZIP analysis tests the five slots sequentially and displays which slot/label opened each archive. Passwords are not stored in report snapshots. Link Management now uses server-side pagination and full-dataset exports to avoid rendering thousands of rows at once.

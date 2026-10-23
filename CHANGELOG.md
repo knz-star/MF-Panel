@@ -114,3 +114,10 @@ Migrations 1–7 are live. Extra fixes made while applying: `mfp_ensure_profile`
 ## 2.14.17
 - Added visible Admin Dashboard shortcuts for System Tests and System Test Reset / Workflow Review & Reset.
 - Removed System Tests from the mobile More menu so the dashboard is the primary shortcut location.
+
+
+## 2.14.18 — Five ZIP Codes, Match Traceability, and Large Link Management
+- Replaced the single website ZIP password with exactly five administrator-managed code slots stored in the private Supabase schema. Active senior Admins can generate five codes on Supabase or enter custom codes; all five must be unique and saved before analysis.
+- ZIP analysis tests the five configured codes in order, stops at the first code that opens and validates the archive, and shows/saves the ZIP filename plus matching slot label. Password values are not written into report snapshots.
+- Link Management now fetches and renders only a paginated slice of records instead of loading and mounting the full 19k+ dataset at once. Search is server-filtered, deletion remains batch-based, and Invalid/Blocked exports scan all pages when explicitly requested.
+- Applied Supabase migrations for the five-code RPCs, tightened the legacy single-code RPC to senior Admins, and added a composite index for Link Management pagination. The matching SQL files are included in the ZIP. Android source remains unchanged. Production build and deployment are not yet verified.

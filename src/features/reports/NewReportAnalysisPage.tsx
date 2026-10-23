@@ -131,26 +131,20 @@ export const NewReportAnalysisPage: React.FC = () => {
     setDownloadPackage(null);
 
     try {
-      // Retrieve the saved ZIP secret from the authenticated Supabase admin RPC.
-      // It is never hard-coded in the website bundle or requested on each upload.
-      let password = '';
-      try {
-        const { data: secret, error: secretError } = await supabase.rpc('mfp_get_evidence_zip_password');
-        if (secretError) throw secretError;
-        password = typeof secret === 'string' ? secret : '';
-      } catch (secretError) {
-        console.warn('Saved ZIP password could not be retrieved from Supabase.', secretError);
-        throw new Error('Saved ZIP password could not be retrieved. Confirm that your administrator access is active and the Supabase ZIP export setting is configured.');
-      }
-      if (!password) throw new Error('No ZIP password is configured in Supabase. Ask an administrator to configure it once in Evidence Control Center.');
-      setArchivePassword(password || null);
+      // Fetch exactly five administrator-managed slots through an authenticated RPC.
+      // Password values are not written to report snapshots; only the matched slot/label is saved.
+      const { data: configuredCodes, error: codesError } = await supabase.rpc('mfp_get_evidence_zip_passwords');
+      if (codesError) throw new Error('Could not retrieve the five ZIP codes. Ask an administrator to configure them in Evidence Control Center.');
+      const codes = Array.isArray(configuredCodes) ? configuredCodes.filter((item: any) => item && typeof item.password === 'string' && item.password.trim()) : [];
+      if (codes.length !== 5) throw new Error(`Exactly five ZIP codes must be configured by an administrator before analysis. Currently configured: ${codes.length}/5.`);
+      setArchivePassword('configured');
       const result = await analyzeUploadedZip(
         selectedFile,
         currentUser?.uid || 'USER',
         currentUser?.email || undefined,
         linksPerFolder,
         batchManifest ?? undefined,
-        password || undefined
+        codes.map((item: any, index: number) => ({ label: String(item.label || `Code ${index + 1}`), password: String(item.password) }))
       );
       setAnalysisResult(result);
       // Match extracted ZIP URLs against this signed-in user's previously assigned links.
@@ -162,7 +156,7 @@ export const NewReportAnalysisPage: React.FC = () => {
         console.warn('ZIP analysis completed but assigned-link reconciliation was unavailable.', matchError);
         setAssignmentMatch(null);
       }
-      try { await setDoc(doc(db, 'reportAnalysisSnapshots', result.job.jobId), { jobId: result.job.jobId, job: result.job, textFileBreakdowns: result.textFileBreakdowns, extractedUrls: result.extractedUrls.slice(0, 500), uniqueEligibleLinks: result.uniqueEligibleLinks.slice(0, 500), extractedScreenshots: result.extractedScreenshots.slice(0, 500).map(({ blob, dataUrl, ...item }) => item), savedAt: new Date().toISOString() }, { merge: true }); } catch (snapshotError) { console.warn('Analysis snapshot could not be saved; current session remains available.', snapshotError); }
+      try { await setDoc(doc(db, 'reportAnalysisSnapshots', result.job.jobId), { jobId: result.job.jobId, job: result.job, passwordMatch: result.passwordMatch, textFileBreakdowns: result.textFileBreakdowns, extractedUrls: result.extractedUrls.slice(0, 500), uniqueEligibleLinks: result.uniqueEligibleLinks.slice(0, 500), extractedScreenshots: result.extractedScreenshots.slice(0, 500).map(({ blob, dataUrl, ...item }) => item), savedAt: new Date().toISOString() }, { merge: true }); } catch (snapshotError) { console.warn('Analysis snapshot could not be saved; current session remains available.', snapshotError); }
     } catch (err: any) {
       console.error(err);
       setErrorMessage(err.message || 'Analysis failed. Please check archive structure.');
@@ -244,7 +238,7 @@ export const NewReportAnalysisPage: React.FC = () => {
 
       {/* Upload Zone */}
       {snapshotLoading && !analysisResult && <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">Loading saved analysis results…</div>}
-      {savedSnapshot && !analysisResult && !snapshotLoading && <section className="rounded-2xl border border-blue-200 bg-blue-50 p-5"><p className="text-[11px] font-bold uppercase tracking-widest text-blue-700">Saved report analysis</p><h2 className="mt-1 text-lg font-bold text-slate-950">{savedSnapshot.job?.sourceArchiveName || savedSnapshot.jobId}</h2><p className="mt-1 text-xs text-slate-600">Job {savedSnapshot.jobId} · Saved {savedSnapshot.savedAt ? new Date(savedSnapshot.savedAt).toLocaleString() : 'date unavailable'}</p><div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">{[[savedSnapshot.job?.inputLinkCount ?? savedSnapshot.extractedUrls?.length ?? 0,'Input links'],[savedSnapshot.job?.uniqueLinkCount ?? savedSnapshot.uniqueEligibleLinks?.length ?? 0,'Unique eligible'],[savedSnapshot.job?.matchedScreenshotCount ?? 0,'Matched screenshots'],[savedSnapshot.job?.reviewRequiredCount ?? 0,'Needs review']].map(([n,label])=><div key={String(label)} className="rounded-xl bg-white p-3"><p className="text-xl font-bold text-slate-950">{n}</p><p className="text-xs text-slate-600">{label}</p></div>)}</div><p className="mt-3 text-xs text-slate-600">Saved summary and match metadata restored. The original ZIP file is not stored on the server, so re-upload it if you need to regenerate a package.</p><button type="button" onClick={()=>{setSavedSnapshot(null);window.history.replaceState({},'',window.location.pathname);}} className="mt-4 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white">Start a new analysis</button></section>}
+      {savedSnapshot && !analysisResult && !snapshotLoading && <section className="rounded-2xl border border-blue-200 bg-blue-50 p-5"><p className="text-[11px] font-bold uppercase tracking-widest text-blue-700">Saved report analysis</p><h2 className="mt-1 text-lg font-bold text-slate-950">{savedSnapshot.job?.sourceArchiveName || savedSnapshot.jobId}</h2><p className="mt-1 text-xs text-slate-600">Job {savedSnapshot.jobId} · Saved {savedSnapshot.savedAt ? new Date(savedSnapshot.savedAt).toLocaleString() : 'date unavailable'}</p><div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">{[[savedSnapshot.job?.inputLinkCount ?? savedSnapshot.extractedUrls?.length ?? 0,'Input links'],[savedSnapshot.job?.uniqueLinkCount ?? savedSnapshot.uniqueEligibleLinks?.length ?? 0,'Unique eligible'],[savedSnapshot.job?.matchedScreenshotCount ?? 0,'Matched screenshots'],[savedSnapshot.job?.reviewRequiredCount ?? 0,'Needs review']].map(([n,label])=><div key={String(label)} className="rounded-xl bg-white p-3"><p className="text-xl font-bold text-slate-950">{n}</p><p className="text-xs text-slate-600">{label}</p></div>)}</div>{savedSnapshot.passwordMatch && <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">ZIP code match: <strong>{savedSnapshot.passwordMatch.label} (slot {savedSnapshot.passwordMatch.slot})</strong> successfully opened <strong>{savedSnapshot.passwordMatch.archiveName || savedSnapshot.job?.sourceArchiveName || 'this ZIP'}</strong>.</p>}<p className="mt-3 text-xs text-slate-600">Saved summary and match metadata restored. The original ZIP file is not stored on the server, so re-upload it if you need to regenerate a package.</p><button type="button" onClick={()=>{setSavedSnapshot(null);window.history.replaceState({},'',window.location.pathname);}} className="mt-4 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white">Start a new analysis</button></section>}
       {!analysisResult && (
         <div
           onDragOver={(e) => e.preventDefault()}
@@ -269,7 +263,7 @@ export const NewReportAnalysisPage: React.FC = () => {
           </div>
           <div className="mx-auto grid max-w-2xl gap-3 text-left sm:grid-cols-2">
             <label className="block rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-semibold text-slate-700">Optional batch JSON<input type="file" accept=".json,application/json" onChange={handleManifestFileChange} className="mt-2 block w-full text-xs font-normal"/><span className="mt-1 block text-[11px] font-normal text-slate-500">{batchManifest ? `${batchManifest.batchName || batchManifest.batchId || 'Batch manifest'} · ${batchManifest.links.length} links` : selectedManifestFile?.name || 'Use the batch JSON example you provided.'}</span></label>
-            <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs text-emerald-900"><p className="font-semibold">ZIP password managed by Supabase</p><p className="mt-1 leading-5">The website automatically retrieves the saved password through an authenticated administrator-only operation. You do not need to enter it for every upload.</p>{archivePassword === null && <p className="mt-1 text-emerald-800">Password will be retrieved securely when analysis starts.</p>}</div>
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs text-emerald-900"><p className="font-semibold">ZIP password managed by Supabase</p><p className="mt-1 leading-5">The website retrieves exactly five administrator-configured codes from Supabase and tests them sequentially. It records the matching code slot and ZIP filename, without saving the password in the report snapshot.</p>{archivePassword === null && <p className="mt-1 text-emerald-800">Password will be retrieved securely when analysis starts.</p>}</div>
           </div>
           {manifestError && <p role="alert" className="mx-auto max-w-2xl rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">{manifestError}</p>}
 
@@ -315,6 +309,7 @@ export const NewReportAnalysisPage: React.FC = () => {
       {/* Analysis Results View */}
       {analysisResult && (
         <div className="space-y-6">
+          {analysisResult.passwordMatch && <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 sm:p-5"><p className="text-[11px] font-bold uppercase tracking-widest text-emerald-800">ZIP password match confirmed</p><h2 className="mt-1 text-lg font-bold text-emerald-950">{analysisResult.passwordMatch.archiveName}</h2><p className="mt-1 text-sm text-emerald-900">Successfully decrypted using <strong>{analysisResult.passwordMatch.label}</strong> — slot <strong>{analysisResult.passwordMatch.slot} of 5</strong>. The other codes were not needed after this match.</p></section>}
           {/* Header Summary Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
             <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">

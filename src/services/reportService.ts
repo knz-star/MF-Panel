@@ -35,6 +35,7 @@ const PACKAGES_COLLECTION = 'reportPackages';
 
 export interface AnalysisSessionResult {
   job: ReportJob;
+  passwordMatch?: { slot: number; label: string; archiveName: string };
   zipInstance: JSZip;
   textFileBreakdowns: {
     filename: string;
@@ -55,12 +56,23 @@ export async function analyzeUploadedZip(
   userEmail?: string,
   linksPerFolder = 100,
   providedManifest?: EvidenceBatchManifest,
-  archivePassword?: string
+  archivePassword?: string | Array<{ label: string; password: string }>
 ): Promise<AnalysisSessionResult> {
-  // 1. Validate ZIP
-  const validation = await validateAndLoadZip(file, {}, archivePassword);
-  if (!validation.isValid || !validation.zipInstance) {
-    throw new Error(validation.errors.join(' | '));
+  // 1. Test configured ZIP codes sequentially; stop at the first code that decrypts
+  // and validates the archive. Only that successful archive is passed to analysis.
+  const candidates = (Array.isArray(archivePassword)
+    ? archivePassword.filter((item) => item && typeof item.password === 'string' && item.password.length > 0).slice(0, 5)
+    : archivePassword ? [{ label: 'Code 1', password: archivePassword }] : []);
+  if (candidates.length === 0) throw new Error('Admin has not configured the five ZIP password slots. Ask an administrator to set all five codes in Evidence Control Center.');
+  let validation: Awaited<ReturnType<typeof validateAndLoadZip>> | null = null;
+  let matchedCode: { slot: number; label: string } | null = null;
+  for (let i = 0; i < candidates.length; i++) {
+    const candidate = candidates[i];
+    const attempt = await validateAndLoadZip(file, {}, candidate.password);
+    if (attempt.isValid && attempt.zipInstance) { validation = attempt; matchedCode = { slot: i + 1, label: candidate.label || `Code ${i + 1}` }; break; }
+  }
+  if (!validation?.zipInstance || !matchedCode) {
+    throw new Error(`None of the ${candidates.length} configured ZIP codes could open “${file.name}”. Tested each configured code in order. Check the admin code slots and archive integrity.`);
   }
 
   const zip = validation.zipInstance;
@@ -319,6 +331,7 @@ export async function analyzeUploadedZip(
 
   return {
     job,
+    passwordMatch: { ...matchedCode, archiveName: file.name },
     zipInstance: zip,
     textFileBreakdowns,
     extractedUrls,
