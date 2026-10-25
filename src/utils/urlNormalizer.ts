@@ -77,7 +77,7 @@ export function normalizeUrl(rawUrl: string): NormalizedUrlResult {
   if (hostname.includes('instagram.com') || hostname === 'instagr.am') {
     platform = 'INSTAGRAM';
     // Match posts: /p/ID, /reel/ID, /tv/ID
-    const postMatch = pathname.match(/^\/(?:p|reel|tv)\/([a-zA-Z0-9_\-]+)/i);
+    const postMatch = pathname.match(/^\/(?:p|reel|reels|tv|stories)\/([a-zA-Z0-9_\-]+)/i);
     if (postMatch) {
       urlType = 'POST';
       const postId = postMatch[1];
@@ -109,6 +109,9 @@ export function normalizeUrl(rawUrl: string): NormalizedUrlResult {
       pathname.includes('/posts/') ||
       pathname.includes('/videos/') ||
       pathname.includes('/reel/') ||
+      pathname.includes('/photo.php') ||
+      pathname.includes('/permalink/') ||
+      pathname.includes('/story.php') ||
       parsed.searchParams.has('story_fbid')
     ) {
       urlType = 'POST';
@@ -153,14 +156,14 @@ export function normalizeUrl(rawUrl: string): NormalizedUrlResult {
         urlType = 'POST';
         canonicalKey = `yt_video_${videoId}`;
       }
-    } else if (pathname.includes('/watch') && parsed.searchParams.has('v')) {
+    } else if ((pathname.includes('/watch') && parsed.searchParams.has('v')) || pathname.startsWith('/live/')) {
       urlType = 'POST';
       canonicalKey = `yt_video_${parsed.searchParams.get('v')}`;
     } else if (pathname.includes('/shorts/')) {
       urlType = 'POST';
       const shortId = pathname.replace('/shorts/', '');
       canonicalKey = `yt_short_${shortId}`;
-    } else if (pathname.startsWith('/@') || pathname.startsWith('/c/') || pathname.startsWith('/channel/')) {
+    } else if (pathname.startsWith('/@') || pathname.startsWith('/c/') || pathname.startsWith('/channel/') || pathname.startsWith('/user/')) {
       urlType = 'PROFILE';
       canonicalKey = `yt_profile_${pathname.toLowerCase()}`;
     }

@@ -26,7 +26,14 @@ export const ForgotPasswordPage: React.FC = () => {
       await resetPassword(email.trim());
       setMessage('Agar yeh email registered hai to password reset link bhej diya gaya hai. Inbox aur spam folder check karein.');
     } catch (err) {
-      setError(authErrorMessage(err, 'reset'));
+      const code = (err as { code?: string })?.code;
+      const retryAt = (err as { retryAt?: string })?.retryAt;
+      if (code === 'password_reset_limit') {
+        const when = retryAt ? new Date(retryAt).toLocaleString() : 'the 7-day window expires';
+        setError(`You can request password reset only twice in 7 days. Try again after ${when}.`);
+      } else {
+        setError(authErrorMessage(err, 'reset'));
+      }
     } finally {
       setIsSubmitting(false);
     }

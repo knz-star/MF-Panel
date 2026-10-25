@@ -17,16 +17,13 @@ export const SignupPage: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [diagnosticError, setDiagnosticError] = useState<unknown>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { signupWithEmail, resendConfirmation } = useAuth();
+  const { signupWithEmail } = useAuth();
   const { assets: siteAssets } = useLandingAssets();
   const siteBanner = siteAssets.find((asset) => asset.assetType === 'banner')?.imageUrl || 'https://i.postimg.cc/P5hbxNy7/20261015-112236.jpg';
   const navigate = useNavigate();
 
   const friendlyError = (err: unknown) => authErrorMessage(err, 'signup');
-  const NEUTRAL = 'Request receive ho gayi. Agar yeh email naya hai to verification email bheji gayi hai; inbox aur spam check karein. Agar aap pehle se registered hain to Sign in karein ya Forgot password use karein.';
-  const [resendNote, setResendNote] = useState<string | null>(null);
-  const [resending, setResending] = useState(false);
-  const handleResend = async () => { setResending(true); setResendNote(null); try { await resendConfirmation(email); setResendNote('Agar is email ka account verification ka muntazir hai to nayi verification email bhej di gayi hai.'); } catch (err) { setResendNote(authErrorMessage(err, 'resend')); } finally { setResending(false); } };
+  const NEUTRAL = 'Yeh email pehle se registered ho sakti hai. Sign in karein ya Forgot password use karein.';
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -68,11 +65,11 @@ export const SignupPage: React.FC = () => {
   return (
     <div className="flex min-h-screen flex-col justify-center bg-gradient-to-b from-[#eef3ff] via-[#f5f5f7] to-white px-4 py-8 sm:px-6">
       <div className="mx-auto mb-6 w-full max-w-3xl overflow-hidden rounded-[28px] border border-white/80 bg-white shadow-[0_20px_60px_-30px_rgba(15,23,42,0.3)]">
-        <img src={siteBanner} alt="MF MPanel banner" className="block aspect-video w-full object-cover" />
+        <img src={siteBanner} alt="MF MPanel banner" loading="eager" decoding="async" onError={(event) => { const image = event.currentTarget; if (!image.dataset.fallback) { image.dataset.fallback = 'true'; image.src = '/mf-auth-banner-fallback.svg'; } else { image.style.display = 'none'; } }} className="block aspect-video w-full object-cover" />
       </div>
       <div className="mx-auto w-full max-w-md text-center"><Link to="/" className="mb-5 inline-flex items-center gap-2"><span className="grid h-9 w-9 place-items-center rounded-xl bg-slate-950 text-sm font-bold text-white">MF</span><span className="text-xl font-semibold tracking-tight text-slate-950">MF MPanel</span></Link><h1 className="text-2xl font-semibold tracking-tight text-slate-950">Create your account</h1><p className="mt-2 text-sm text-slate-600">Create your account, sign the Urdu pledge, then wait for admin review and team assignment.</p></div>
       <div className="mx-auto mt-8 w-full max-w-md rounded-[28px] border border-white/80 bg-white/90 p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.25)] backdrop-blur-xl sm:p-8">
-        {success && <div role="status" className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{success} <Link to="/login" className="font-semibold underline">Sign in par jayein</Link> · <button type="button" onClick={() => void handleResend()} disabled={resending} className="font-semibold underline disabled:opacity-60">{resending ? 'Bheja ja raha hai…' : 'Verification email dobara bhejein'}</button>{resendNote && <span className="mt-2 block text-xs">{resendNote}</span>}</div>}
+        {success && <div role="status" className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{success} <Link to="/login" className="font-semibold underline">Sign in par jayein</Link></div>}
         {error && <div role="alert" className="mb-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /><span className="break-words">{error}</span></div>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <label className="block text-sm font-medium text-slate-700">Full name<div className="relative mt-1.5"><User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input required autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full rounded-xl border border-slate-200 py-3 pl-10 pr-3 text-sm outline-none focus:border-blue-600" placeholder="Your name" /></div></label>

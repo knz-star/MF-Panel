@@ -114,3 +114,7 @@ Apply `supabase/migrations/20261022030000_mfp_auto_zip_password_and_team_ui.sql`
 
 ### v2.14.18 — Five ZIP code configuration
 The five-code RPC migration, legacy RPC restriction, and Link Management pagination index have already been applied to the connected Supabase project; their SQL migration files are included for version control. In Admin → Evidence Control Center → Export settings, generate five secure codes or enter five unique custom codes, then save. ZIP analysis tests the five slots sequentially and displays which slot/label opened each archive. Passwords are not stored in report snapshots. Link Management now uses server-side pagination and full-dataset exports to avoid rendering thousands of rows at once.
+
+
+## v2.16.4 note
+This source package includes the team/gender settings migration at `supabase/migrations/20261025170000_mfp_team_gender_settings.sql`. Apply and verify this migration before deploying the updated team/gender settings UI. The complete end-to-end male/female isolation audit for all independent RPCs remains a required release gate; do not describe this as fully production-verified until those tests pass.

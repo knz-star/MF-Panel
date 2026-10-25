@@ -32,6 +32,7 @@ export const NewReportAnalysisPage: React.FC = () => {
   const [batchManifest, setBatchManifest] = useState<EvidenceBatchManifest | null>(null);
   const [manifestError, setManifestError] = useState<string | null>(null);
   const [archivePassword, setArchivePassword] = useState<string | null>(null);
+  const [customArchivePassword, setCustomArchivePassword] = useState('');
   const [searchParams] = useSearchParams();
   const [savedSnapshot, setSavedSnapshot] = useState<any>(null);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
@@ -134,17 +135,18 @@ export const NewReportAnalysisPage: React.FC = () => {
       // Fetch exactly five administrator-managed slots through an authenticated RPC.
       // Password values are not written to report snapshots; only the matched slot/label is saved.
       const { data: configuredCodes, error: codesError } = await supabase.rpc('mfp_get_evidence_zip_passwords');
-      if (codesError) throw new Error('Could not retrieve the five ZIP codes. Ask an administrator to configure them in Evidence Control Center.');
+      if (codesError && !customArchivePassword.trim()) throw new Error('Could not retrieve the saved ZIP codes. Enter this archive password or ask an administrator to configure the five saved codes.');
       const codes = Array.isArray(configuredCodes) ? configuredCodes.filter((item: any) => item && typeof item.password === 'string' && item.password.trim()) : [];
-      if (codes.length !== 5) throw new Error(`Exactly five ZIP codes must be configured by an administrator before analysis. Currently configured: ${codes.length}/5.`);
-      setArchivePassword('configured');
+      if (codes.length !== 5 && !customArchivePassword.trim()) throw new Error(`Five saved ZIP codes are not fully configured (${codes.length}/5). Enter this ZIP password to continue, or ask an administrator to complete the five saved codes.`);
+      if (codes.length > 5) throw new Error('Unexpected ZIP code configuration. Please refresh and try again.');
+      setArchivePassword(codes.length === 5 ? 'configured' : 'custom');
       const result = await analyzeUploadedZip(
         selectedFile,
         currentUser?.uid || 'USER',
         currentUser?.email || undefined,
         linksPerFolder,
         batchManifest ?? undefined,
-        codes.map((item: any, index: number) => ({ label: String(item.label || `Code ${index + 1}`), password: String(item.password) }))
+        [...codes.map((item: any, index: number) => ({ label: String(item.label || `Code ${index + 1}`), password: String(item.password) })), ...(customArchivePassword.trim() ? [{ label: 'Admin-entered password', password: customArchivePassword.trim() }] : [])]
       );
       setAnalysisResult(result);
       // Match extracted ZIP URLs against this signed-in user's previously assigned links.
@@ -263,7 +265,7 @@ export const NewReportAnalysisPage: React.FC = () => {
           </div>
           <div className="mx-auto grid max-w-2xl gap-3 text-left sm:grid-cols-2">
             <label className="block rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-semibold text-slate-700">Optional batch JSON<input type="file" accept=".json,application/json" onChange={handleManifestFileChange} className="mt-2 block w-full text-xs font-normal"/><span className="mt-1 block text-[11px] font-normal text-slate-500">{batchManifest ? `${batchManifest.batchName || batchManifest.batchId || 'Batch manifest'} · ${batchManifest.links.length} links` : selectedManifestFile?.name || 'Use the batch JSON example you provided.'}</span></label>
-            <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs text-emerald-900"><p className="font-semibold">ZIP password managed by Supabase</p><p className="mt-1 leading-5">The website retrieves exactly five administrator-configured codes from Supabase and tests them sequentially. It records the matching code slot and ZIP filename, without saving the password in the report snapshot.</p>{archivePassword === null && <p className="mt-1 text-emerald-800">Password will be retrieved securely when analysis starts.</p>}</div>
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs text-emerald-900"><p className="font-semibold">ZIP password</p><p className="mt-1 leading-5">The five saved codes are checked first. An administrator may also enter this ZIP's password for this analysis only; it is not saved in the report snapshot.</p><label className="mt-3 block font-semibold" htmlFor="custom-archive-password">Admin custom ZIP password (optional)</label><input id="custom-archive-password" type="password" autoComplete="off" value={customArchivePassword} onChange={e=>setCustomArchivePassword(e.target.value)} placeholder="Enter this ZIP's password" className="mt-1 min-h-10 w-full rounded-lg border border-emerald-200 bg-white px-3 text-sm text-slate-900"/>{archivePassword === null && <p className="mt-1 text-emerald-800">Managed codes will be retrieved securely when analysis starts.</p>}</div>
           </div>
           {manifestError && <p role="alert" className="mx-auto max-w-2xl rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">{manifestError}</p>}
 

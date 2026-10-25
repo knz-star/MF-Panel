@@ -12,7 +12,7 @@ interface AuthContextType {
   loginWithEmail: (email: string, pass: string) => Promise<void>;
   signupWithEmail: (name: string, email: string, pass: string, gender: 'male' | 'female') => Promise<void>;
   logout: () => Promise<void>;
-  resetPassword: (email: string) => Promise<void>; updatePassword: (password: string) => Promise<void>; resendConfirmation: (email: string) => Promise<void>; hasModuleAccess: (module: ModuleKey) => boolean; refreshProfile: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>; updatePassword: (password: string) => Promise<void>; hasModuleAccess: (module: ModuleKey) => boolean; refreshProfile: () => Promise<void>;
 }
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const INITIAL_CONNECTION: BackendConnectionStatus = { state: 'INITIALIZING', projectId: 'nvzvyzgantmtwjfnrqdo', authDomain: 'nvzvyzgantmtwjfnrqdo.supabase.co', lastChecked: new Date().toISOString() };
@@ -102,20 +102,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data, error } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password: pass, options: { data: { full_name: name.trim(), gender }, emailRedirectTo: `${window.location.origin}/login` } });
       if (error) throw error;
       if (!data.session) {
-        // With email confirmation on, Supabase hides existing accounts by returning a user with no identities (and sends no email).
-        if (Array.isArray(data.user?.identities) && data.user.identities.length === 0) { const existing = new Error('Account already registered or pending verification'); (existing as Error & { code?: string }).code = 'signup_existing_or_pending'; throw existing; }
-        throw new Error('Signup submitted. Please confirm your email from the inbox, then sign in.');
+        // Email confirmation must be disabled in Supabase Auth for immediate signup sessions.
+        if (Array.isArray(data.user?.identities) && data.user.identities.length === 0) { const existing = new Error('This email is already registered. Please sign in or use Forgot password.'); (existing as Error & { code?: string }).code = 'signup_existing_or_pending'; throw existing; }
+        throw Object.assign(new Error('Supabase email confirmation is still enabled. Disable Confirm email in Supabase Dashboard → Authentication → Sign In / Providers → Email, then try again.'), { code: 'email_confirmation_enabled' });
       }
       const user = mapUser(data.user); if (user) await hydrateUser(user);
     } finally { setIsLoading(false); }
   };
   const logout = async () => { const { error } = await supabase.auth.signOut(); if (error) throw error; localStore.clearAll(); setCurrentUser(null); setUserProfile(null); };
-  const resetPassword = async (email: string) => { const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), { redirectTo: `${window.location.origin}/reset-password` }); if (error) throw error; };
+  const resetPassword = async (email: string) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const { data: quota, error: quotaError } = await supabase.rpc('mfp_check_password_reset_quota', { p_email: normalizedEmail });
+    if (quotaError) throw new Error('Password reset service is temporarily unavailable. Please try again later.');
+    if (!quota?.allowed) {
+      const limited = new Error(quota?.message || 'You can request password reset only twice in 7 days.') as Error & { code?: string; retryAt?: string };
+      limited.code = 'password_reset_limit'; limited.retryAt = quota?.retryAt;
+      throw limited;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, { redirectTo: `${window.location.origin}/reset-password` });
+    if (error) throw error;
+  };
   const updatePassword = async (password: string) => { const { error } = await supabase.auth.updateUser({ password }); if (error) throw error; try { window.sessionStorage.removeItem('mfp-password-recovery-at'); } catch { /* Ignore unavailable session storage. */ } };
-  const resendConfirmation = async (email: string) => { const { error } = await supabase.auth.resend({ type: 'signup', email: email.trim().toLowerCase(), options: { emailRedirectTo: `${window.location.origin}/login` } }); if (error) throw error; };
   const isAdmin = !!currentUser && userProfile?.role === 'ADMIN' && userProfile.accountStatus === 'ACTIVE';
   const isTeamAdmin = !!currentUser && userProfile?.role === 'TEAM_ADMIN' && userProfile.accountStatus === 'ACTIVE';
   const hasModuleAccess = (module: ModuleKey): boolean => { if (!currentUser || !userProfile || userProfile.accountStatus !== 'ACTIVE') return false; if (isAdmin) return true; if (module === 'admin') return false; const teamModules: TeamKey[] = ['searching','checking','reports','evidence']; if (teamModules.includes(module as TeamKey)) return userProfile.team === module && userProfile.allowedModules?.includes(module) === true; return userProfile.accountStatus === 'ACTIVE' && userProfile.allowedModules?.includes(module) === true; };
-  return <AuthContext.Provider value={{ currentUser, userProfile, isLoading, isAdmin, isTeamAdmin, connectionStatus, profileLoadError, loginWithEmail, signupWithEmail, logout, resetPassword, updatePassword, resendConfirmation, hasModuleAccess, refreshProfile }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ currentUser, userProfile, isLoading, isAdmin, isTeamAdmin, connectionStatus, profileLoadError, loginWithEmail, signupWithEmail, logout, resetPassword, updatePassword, hasModuleAccess, refreshProfile }}>{children}</AuthContext.Provider>;
 };
 export function useAuth() { const value = useContext(AuthContext); if (!value) throw new Error('useAuth must be used within AuthProvider'); return value; }

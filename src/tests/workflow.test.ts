@@ -39,6 +39,12 @@ Check out https://tiktok.com/@video_maker and https://youtube.com/@channel
   assert(extracted[0].normalized.platform === 'INSTAGRAM', 'Correctly classified Instagram');
   assert(extracted[0].normalized.urlType === 'PROFILE', 'Distinguished profile URL');
   assert(extracted[1].normalized.urlType === 'POST', 'Distinguished post URL');
+  const facebookPost = normalizeUrl('https://www.facebook.com/example/posts/123456');
+  assert(facebookPost.urlType === 'POST', 'Classified Facebook /posts/ URL as a post');
+  const tiktokPost = normalizeUrl('https://www.tiktok.com/@maker/video/123456789');
+  assert(tiktokPost.urlType === 'POST', 'Classified TikTok video URL as a post');
+  const tiktokProfile = normalizeUrl('https://www.tiktok.com/@maker');
+  assert(tiktokProfile.urlType === 'PROFILE', 'Classified TikTok account URL as a profile');
 
   // Test 2: URL Normalization & Tracking parameter stripping
   console.log('\nTest Suite 2: Safe URL Normalization');

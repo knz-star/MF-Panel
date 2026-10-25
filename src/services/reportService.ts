@@ -61,9 +61,9 @@ export async function analyzeUploadedZip(
   // 1. Test configured ZIP codes sequentially; stop at the first code that decrypts
   // and validates the archive. Only that successful archive is passed to analysis.
   const candidates = (Array.isArray(archivePassword)
-    ? archivePassword.filter((item) => item && typeof item.password === 'string' && item.password.length > 0).slice(0, 5)
+    ? archivePassword.filter((item) => item && typeof item.password === 'string' && item.password.length > 0).slice(0, 6)
     : archivePassword ? [{ label: 'Code 1', password: archivePassword }] : []);
-  if (candidates.length === 0) throw new Error('Admin has not configured the five ZIP password slots. Ask an administrator to set all five codes in Evidence Control Center.');
+  if (candidates.length === 0) throw new Error('No ZIP password was supplied. Configure the five managed codes or enter the archive password.');
   let validation: Awaited<ReturnType<typeof validateAndLoadZip>> | null = null;
   let matchedCode: { slot: number; label: string } | null = null;
   for (let i = 0; i < candidates.length; i++) {

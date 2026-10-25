@@ -7,7 +7,8 @@ export function authErrorMessage(err: unknown, context: AuthErrorContext = 'gene
   const e = (err ?? {}) as { code?: string; status?: number; name?: string; message?: string };
   const code = String(e.code ?? '').toLowerCase();
   const message = String(e.message ?? '');
-  if (code === 'email_not_confirmed' || /email not confirmed/i.test(message)) return 'Apna email verify karein. Agar email nahi mili, to verification email dobara bhejein.';
+  if (code === 'email_confirmation_enabled') return 'Email verification abhi Supabase par ON hai. Admin ko Supabase Authentication settings mein Confirm email OFF karna hoga.';
+  if (code === 'email_not_confirmed' || /email not confirmed/i.test(message)) return 'Is account ke liye Supabase email confirmation abhi required hai. Admin se confirmation setting check karwayein.';
   if (code === 'invalid_credentials' || /invalid login credentials/i.test(message)) return 'Email ya password check karein aur dobara try karein.';
   if (/failed to fetch|networkerror|network request failed|load failed/i.test(message) || e.name === 'AuthRetryableFetchError' || e.status === 0) return 'Connection issue hai. Internet check karke dobara try karein.';
   if (code === 'over_email_send_rate_limit' || code === 'over_request_rate_limit' || code === 'too_many_requests' || e.status === 429 || /rate limit|too many/i.test(message)) return 'Bohat zyada attempts hue hain. Kuch der baad dobara try karein.';
