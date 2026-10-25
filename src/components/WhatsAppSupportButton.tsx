@@ -2,21 +2,23 @@ import React, { useEffect, useState } from 'react';
 import { MessageCircle } from 'lucide-react';
 import { getSupportContact, buildWhatsAppLink, SupportContact } from '../services/supportService';
 import { useAuth } from '../features/auth/AuthContext';
+import type { TeamKey } from '../types/user';
 
 type GenderGroup = 'male' | 'female';
 
 interface WhatsAppSupportButtonProps {
+  teamKey: TeamKey;
   genderGroup: GenderGroup;
 }
 
-export const WhatsAppSupportButton: React.FC<WhatsAppSupportButtonProps> = ({ genderGroup }) => {
+export const WhatsAppSupportButton: React.FC<WhatsAppSupportButtonProps> = ({ teamKey, genderGroup }) => {
   const [contact, setContact] = useState<SupportContact | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    getSupportContact(genderGroup)
+    getSupportContact(teamKey, genderGroup)
       .then((data) => {
         if (mounted) {
           setContact(data);
@@ -32,7 +34,7 @@ export const WhatsAppSupportButton: React.FC<WhatsAppSupportButtonProps> = ({ ge
     return () => {
       mounted = false;
     };
-  }, [genderGroup]);
+  }, [teamKey, genderGroup]);
 
   if (loading || !contact?.number) {
     return null;
@@ -63,6 +65,7 @@ export const WhatsAppSupportButton: React.FC<WhatsAppSupportButtonProps> = ({ ge
 export const WhatsAppSupportForCurrentUser: React.FC = () => {
   const { userProfile } = useAuth();
   const group = userProfile?.genderGroup || userProfile?.gender;
-  if (group !== 'male' && group !== 'female') return null;
-  return <WhatsAppSupportButton genderGroup={group} />;
+  const team = userProfile?.team;
+  if ((group !== 'male' && group !== 'female') || !team) return null;
+  return <WhatsAppSupportButton teamKey={team} genderGroup={group} />;
 };

@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.16.5 — WhatsApp Support fix
+- WhatsApp Support contacts are now read from the same team+gender settings store the admin panel saves to (mfp_team_gender_settings_api), scoped per team AND gender group; member dashboards pass their own team + gender, so the saved number actually appears as the Support button.
+- Gender Team Dashboard support card updated to the same API with a team selector (Spark fix on top of the builder package: the card previously called the old per-gender signature and the old settings-doc save path, which the new reader no longer reads).
+
+
 ## v2.16.4 — 2026-10-25
 - Simplified Searching intake to one focused paste box with live profile/post/unknown detection preview.
 - Improved URL classification for Facebook post/story/photo links and additional Instagram/YouTube patterns.
