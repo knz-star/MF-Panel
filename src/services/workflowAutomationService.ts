@@ -7,7 +7,7 @@ async function invoke<T>(payload: Record<string, unknown>): Promise<T> {
   return invokeWebsiteApi<T>('mfp-workflow-control', payload);
 }
 export function autoIngestLinks(items: ExtractedBatchItem[], isTestData = false): Promise<IntakeResult> {
-  return invoke<IntakeResult>({ action: 'ingestLinks', isTestData, items: items.map(item => ({ rawUrl: item.extractedUrl, canonicalUrl: item.normalized.normalizedUrl, platform: item.normalized.platform, error: item.normalized.error ?? '', notes: item.senderInfo ? `Source: ${item.senderInfo}` : '' })) });
+  return invoke<IntakeResult>({ action: 'ingestLinks', isTestData, items: items.map(item => ({ rawUrl: item.extractedUrl, canonicalUrl: item.normalized.normalizedUrl, platform: item.normalized.platform, urlType: item.normalized.urlType, error: item.normalized.error ?? '', notes: item.senderInfo ? `Source: ${item.senderInfo}` : '' })) });
 }
 export const previewWorkflowReset = () => invoke<ResetPreview>({ action: 'resetPreview' });
 export const resetTestingData = () => invoke<{success:boolean;deleted:number}>({ action: 'resetTestingData', confirmation: 'DELETE TEST DATA' });

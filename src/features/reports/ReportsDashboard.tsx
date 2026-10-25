@@ -12,6 +12,7 @@ import {
   Download,
 } from 'lucide-react';
 import { listReportJobs } from '../../services/reportService';
+import { WhatsAppSupportForCurrentUser } from '../../components/WhatsAppSupportButton';
 import { ReportJob } from '../../types/report';
 
 export const ReportsDashboard: React.FC = () => {
@@ -36,6 +37,7 @@ export const ReportsDashboard: React.FC = () => {
 
   return (
     <div className="space-y-8">
+      <div className="flex justify-end"><WhatsAppSupportForCurrentUser/></div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200">
         <div>
           <div className="text-[11px] font-semibold text-blue-700 uppercase tracking-wider">

@@ -4,14 +4,20 @@ import { motion, useReducedMotion } from 'motion/react';
 import {
   Check,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
   Database,
   FileArchive,
+  HelpCircle,
   Layers,
   LogOut,
+  Mail,
   Search,
+  Shield,
   ShieldCheck,
   Smartphone,
+  Users,
+  Zap,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -32,9 +38,8 @@ const DEFAULT_HERO_VIDEO_URL =
   'https://videotourl.com/videos/1791950139712-479a96d1-85cd-49ac-b099-3f19603ca56e.mp4';
 
 const HERO_SUBHEADLINE =
-  'Designing connected workflows, managing digital records, and bringing teams and applications together through one central platform.';
+  'Unify digital workflows, manage structured records, and coordinate team activities through one powerful platform.';
 
-// Change these to your real post-login routes.
 const ROUTES = {
   login: '/login',
   signup: '/signup',
@@ -50,7 +55,7 @@ type ToolModule = {
   desc: string;
   icon: LucideIcon;
   route: string;
-  status: ModuleStatus; // set to 'coming-soon' for any module that is not live yet
+  status: ModuleStatus;
 };
 
 const MODULES: ToolModule[] = [
@@ -83,115 +88,37 @@ const MODULES: ToolModule[] = [
   },
 ];
 
-const FOCUS =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0a1b33]';
+const FOCUS = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8853F]';
 
 /* ================================================================== */
-/* Small shared pieces                                                 */
+/* Top bar (sticky nav)                                                */
 /* ================================================================== */
 
-function StatusBadge({ status }: { status: ModuleStatus }) {
-  return status === 'available' ? (
-    <span className="shrink-0 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700">
-      Available
-    </span>
-  ) : (
-    <span className="shrink-0 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-500">
-      Coming soon
-    </span>
-  );
-}
-
-/** Native <dialog>: focus trap, Esc to close and backdrop come from the browser. */
-function InfoDialog({
-  info,
-  onClose,
-}: {
-  info: { title: string; body: string } | null;
-  onClose: () => void;
-}) {
-  const ref = useRef<HTMLDialogElement>(null);
-
-  useEffect(() => {
-    const d = ref.current;
-    if (!d) return;
-    if (info && !d.open) d.showModal();
-    if (!info && d.open) d.close();
-  }, [info]);
+function TopBar({ signedIn, authLoading }: { signedIn: boolean; authLoading: boolean }) {
+  const link = `rounded-xl px-4 py-2 text-sm font-semibold text-[#8A8A80] transition-colors hover:text-[#1F2421] ${FOCUS}`;
 
   return (
-    <dialog
-      ref={ref}
-      onClose={onClose}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-      aria-labelledby="info-dialog-title"
-      className="m-auto w-[calc(100%-2rem)] max-w-sm rounded-[28px] border border-slate-200/60 bg-white p-0 shadow-[0_24px_60px_rgba(10,27,51,0.18)] backdrop:bg-slate-900/30"
-    >
-      <div className="p-6">
-        <h2 id="info-dialog-title" className="font-display text-lg font-medium text-[#0a1b33]">
-          {info?.title}
-        </h2>
-        <p className="mt-2 text-[13px] leading-relaxed text-slate-600">{info?.body}</p>
-        <button
-          type="button"
-          onClick={onClose}
-          autoFocus
-          className={`mt-5 rounded-full bg-[#0a152d] px-5 py-2 text-xs font-semibold text-white ${FOCUS}`}
-        >
-          Close
-        </button>
-      </div>
-    </dialog>
-  );
-}
-
-/* ================================================================== */
-/* Top bar (public vs signed-in)                                       */
-/* ================================================================== */
-
-function TopBar({
-  signedIn,
-  authLoading,
-}: {
-  signedIn: boolean;
-  authLoading: boolean;
-}) {
-  const link = `rounded-full px-3 py-2 text-[13px] font-medium text-slate-600 transition-colors hover:text-[#0a1b33] ${FOCUS}`;
-
-  return (
-    <header
-      data-glass
-      className="sticky top-0 z-40 border-b border-slate-200/50 bg-white/80 pt-[env(safe-area-inset-top)] backdrop-blur-xl"
-    >
-      <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-4 py-3 md:px-8">
-        <Link
-          to="/"
-          className={`flex shrink-0 items-center gap-2 rounded-full font-display text-lg font-medium tracking-tight text-[#0a1b33] ${FOCUS}`}
-        >
-          <span
-            aria-hidden="true"
-            className="grid h-7 w-7 place-items-center rounded-full bg-[#0a152d] text-[11px] text-white"
-          >
-            ✦
+    <header className="sticky top-0 z-50 border-b border-[#E2D9C8] bg-[#FBF7EF]/90 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
+      <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-6 py-4 md:px-8">
+        <Link to="/" className={`flex shrink-0 items-center gap-2.5 rounded-xl font-display text-xl font-bold tracking-tight text-[#1F2421] ${FOCUS}`}>
+          <span aria-hidden="true" className="grid h-9 w-9 place-items-center rounded-xl bg-[#2A2723] text-sm font-bold text-[#F6F1E8]">
+            M
           </span>
-          MF MPanel
+          <span>MF MPanel</span>
         </Link>
 
         <nav aria-label="Page sections" className="hidden items-center gap-1 md:flex">
-          <a href="#overview" className={link}>Overview</a>
-          <a href="#tools" className={link}>Tools</a>
+          <a href="#features" className={link}>Features</a>
           <a href="#workflow" className={link}>Workflow</a>
-          <a href="#architecture" className={link}>Architecture</a>
+          <a href="#faq" className={link}>FAQ</a>
         </nav>
 
-        <div className="flex min-h-9 shrink-0 items-center gap-1">
+        <div className="flex min-h-10 shrink-0 items-center gap-2">
           {authLoading ? null : signedIn ? (
             <>
               <Link
                 to={ROUTES.dashboard}
-                className="rounded-full bg-[#0a152d] px-4 py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0a152d]"
+                className="rounded-xl bg-[#C8853F] px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-[#A86B2C] hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8853F]"
               >
                 Dashboard
               </Link>
@@ -199,19 +126,17 @@ function TopBar({
                 type="button"
                 onClick={() => void logout()}
                 aria-label="Log out"
-                className={`grid h-10 w-10 place-items-center rounded-full text-slate-600 transition-colors hover:text-[#0a1b33] ${FOCUS}`}
+                className={`grid h-10 w-10 place-items-center rounded-xl text-[#8A8A80] transition-colors hover:bg-[#F0E3D0] hover:text-[#1F2421] ${FOCUS}`}
               >
                 <LogOut className="h-4 w-4" aria-hidden="true" />
               </button>
             </>
           ) : (
             <>
-              <Link to={ROUTES.login} className={link}>
-                Login
-              </Link>
+              <Link to={ROUTES.login} className={link}>Login</Link>
               <Link
                 to={ROUTES.signup}
-                className="rounded-full bg-[#0a152d] px-4 py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0a152d]"
+                className="rounded-xl bg-[#C8853F] px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-[#A86B2C] hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8853F]"
               >
                 Get Started
               </Link>
@@ -224,540 +149,534 @@ function TopBar({
 }
 
 /* ================================================================== */
-/* Hero + floating glass navbar                                        */
+/* Hero Section                                                        */
 /* ================================================================== */
 
-type FloatingNavProps = {
-  modules: ToolModule[];
-  logoUrl?: string;
-  onLogo: () => void;
-  onOpenModule: (m: ToolModule) => void;
-};
-
-function FloatingNav({ modules, logoUrl, onLogo, onOpenModule }: FloatingNavProps) {
-  const reduceMotion = useReducedMotion();
-  const [open, setOpen] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: PointerEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setOpen(false);
-        triggerRef.current?.focus();
-      }
-    };
-    document.addEventListener('pointerdown', onDown);
-    document.addEventListener('keydown', onKey);
-    menuRef.current?.querySelector<HTMLElement>('button:not(:disabled)')?.focus();
-    return () => {
-      document.removeEventListener('pointerdown', onDown);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
-
-  const onMenuKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
-    e.preventDefault();
-    const items = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? []);
-    if (!items.length) return;
-    const i = items.indexOf(document.activeElement as HTMLButtonElement);
-    const next = e.key === 'ArrowDown' ? (i + 1) % items.length : (i - 1 + items.length) % items.length;
-    items[next].focus();
-  };
-
-  return (
-    <div ref={wrapRef} className="absolute bottom-10 left-1/2 -translate-x-1/2 z-30 max-w-[calc(100%-1.5rem)]">
-      {open && (
-        <div className="absolute bottom-full left-1/2 mb-3 w-[22rem] max-w-[calc(100vw-1.5rem)] -translate-x-1/2">
-          <motion.div
-            ref={menuRef}
-            role="menu"
-            aria-label="MF MPanel products"
-            onKeyDown={onMenuKeyDown}
-            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.18 }}
-            data-glass
-            className="rounded-[28px] border border-slate-200/50 bg-white/95 p-2 shadow-[0_12px_40px_rgba(0,0,0,0.08)] backdrop-blur-2xl"
-          >
-            {modules.map((m) => {
-              const Icon = m.icon;
-              const live = m.status === 'available';
-              return (
-                <button
-                  key={m.key}
-                  type="button"
-                  role="menuitem"
-                  disabled={!live}
-                  onClick={() => {
-                    setOpen(false);
-                    onOpenModule(m);
-                  }}
-                  className={clsx(
-                    'flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors',
-                    live ? 'hover:bg-slate-50 focus-visible:bg-slate-50' : 'cursor-not-allowed opacity-60',
-                    FOCUS,
-                  )}
-                >
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-slate-100 bg-slate-50 text-[#0a1b33]">
-                    <Icon className="h-4 w-4" aria-hidden="true" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[13px] font-semibold text-[#0a1b33]">{m.name}</span>
-                    <span className="block truncate text-[11px] text-slate-500">{m.short}</span>
-                  </span>
-                  <StatusBadge status={m.status} />
-                </button>
-              );
-            })}
-          </motion.div>
-        </div>
-      )}
-
-      <motion.nav
-        data-glass
-        aria-label="Primary"
-        initial={reduceMotion ? false : { opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: reduceMotion ? 0 : 0.6, ease: [0.22, 1, 0.36, 1] }}
-        className="flex items-center bg-white/90 backdrop-blur-2xl px-1.5 py-1.5 rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.08)] border border-slate-200/40"
-      >
-        <button
-          type="button"
-          onClick={onLogo}
-          aria-label="MF MPanel — back to top"
-          className={`w-9 h-9 shrink-0 overflow-hidden rounded-full bg-white border border-slate-100 shadow-sm flex items-center justify-center text-[#0a1b33] ${FOCUS}`}
-        >
-          {logoUrl ? (
-            <img src={logoUrl} alt="" className="h-5 w-5 object-contain" />
-          ) : (
-            <span aria-hidden="true">✦</span>
-          )}
-        </button>
-
-        <button
-          ref={triggerRef}
-          type="button"
-          aria-haspopup="menu"
-          aria-expanded={open}
-          onClick={() => setOpen((o) => !o)}
-          className={clsx(
-            'rounded-full px-3 py-2 text-[12px] font-medium transition-colors sm:px-4 sm:text-[13px]',
-            open ? 'bg-slate-100 text-[#0a1b33]' : 'text-slate-600 hover:text-[#0a1b33]',
-            FOCUS,
-          )}
-        >
-          Products
-        </button>
-
-
-      </motion.nav>
-    </div>
-  );
-}
-
-function Hero({ children, videoUrl }: { children?: React.ReactNode; videoUrl?: string }) {
+function Hero({ videoUrl, signedIn }: { videoUrl?: string; signedIn: boolean }) {
   const reduceMotion = useReducedMotion();
   const [videoFailed, setVideoFailed] = useState(false);
 
   return (
-    <section aria-labelledby="hero-title" className="px-3 pt-3 md:px-6 md:pt-4">
-      <div className="relative w-full max-w-[1400px] mx-auto rounded-[48px] bg-white border border-slate-200/50 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.03)] overflow-hidden h-[600px] min-h-[520px] max-md:h-auto max-md:min-h-[560px] flex flex-col max-md:rounded-[32px]">
-        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden select-none" aria-hidden="true">
-          {videoFailed ? (
-            <div className="h-full w-full bg-slate-50" />
-          ) : (
-            <video
-              ref={(el) => {
-                if (el) el.muted = true; // React does not reliably set the muted attribute
-              }}
-              className="w-full h-full object-cover scale-105 transition-transform duration-1000"
-              src={videoUrl || DEFAULT_HERO_VIDEO_URL}
-              autoPlay={!reduceMotion}
-              loop
-              muted
-              playsInline
-              preload="metadata"
-              onError={() => setVideoFailed(true)}
-            />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-r from-white/95 via-white/82 to-white/30" />
-        </div>
-
+    <section className="relative overflow-hidden bg-[#F6F1E8] px-4 py-16 md:px-8 md:py-24">
+      <div className="mx-auto grid max-w-[1400px] gap-12 lg:grid-cols-2 lg:gap-16">
+        {/* Left Column - Content */}
         <motion.div
-          initial={reduceMotion ? false : { opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-          className="relative z-20 flex-1 px-8 md:px-16 pt-12 md:pt-16 flex flex-col items-start"
+          initial={reduceMotion ? false : { opacity: 0, x: -24 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="flex flex-col justify-center"
         >
-          <h1
-            id="hero-title"
-            className="font-display text-[42px] md:text-[56px] font-medium tracking-tight leading-[1.05] text-[#0a1b33]"
-          >
-            Foundation of the
-            <br />
-            new digital epoch
+          <div className="inline-flex w-fit items-center gap-2 rounded-full bg-[#F0E3D0] px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-[#C8853F]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#C8853F]" aria-hidden="true" />
+            Now in Public Beta
+          </div>
+
+          <h1 className="mt-6 font-display text-[48px] font-bold leading-[1.05] tracking-tight text-[#1F2421] md:text-[64px]">
+            Centralized workflows for{' '}
+            <em className="not-italic text-[#C8853F]">modern teams</em>
           </h1>
-          <p className="mt-5 max-w-[440px] font-sans text-[14px] md:text-[15px] leading-relaxed text-[#334155] [text-shadow:0_1px_12px_rgba(255,255,255,0.98),0_0_24px_rgba(255,255,255,0.95)]">
+
+          <p className="mt-6 max-w-[520px] text-lg leading-relaxed text-[#8A8A80]">
             {HERO_SUBHEADLINE}
           </p>
 
+          <div className="mt-8 flex flex-wrap gap-3">
+            {signedIn ? (
+              <Link
+                to={ROUTES.dashboard}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#C8853F] px-6 py-3.5 text-base font-bold text-white shadow-lg transition-all hover:bg-[#A86B2C] hover:shadow-xl hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8853F]"
+              >
+                Open Dashboard
+                <ChevronRight className="h-5 w-5" aria-hidden="true" />
+              </Link>
+            ) : (
+              <>
+                <Link
+                  to={ROUTES.signup}
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#C8853F] px-6 py-3.5 text-base font-bold text-white shadow-lg transition-all hover:bg-[#A86B2C] hover:shadow-xl hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8853F]"
+                >
+                  Get Started
+                  <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                </Link>
+                <Link
+                  to={ROUTES.login}
+                  className="inline-flex items-center gap-2 rounded-xl border-2 border-[#E2D9C8] bg-white px-6 py-3.5 text-base font-bold text-[#1F2421] transition-all hover:border-[#C8853F] hover:shadow-md hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8853F]"
+                >
+                  Sign In
+                </Link>
+              </>
+            )}
+          </div>
+
+          <div className="mt-10 flex flex-wrap items-center gap-6 text-sm text-[#8A8A80]">
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-[#C8853F]" aria-hidden="true" />
+              <span className="font-semibold">Secure workflow</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-[#C8853F]" aria-hidden="true" />
+              <span className="font-semibold">Team coordination</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-[#C8853F]" aria-hidden="true" />
+              <span className="font-semibold">Real-time sync</span>
+            </div>
+          </div>
         </motion.div>
 
-        {children}
-      </div>
-    </section>
-  );
-}
-
-/* ================================================================== */
-/* Logo marquee (admin-managed, hidden when there is nothing to show)  */
-/* ================================================================== */
-
-function LogoCard({ asset, onImageError }: { asset: LandingAsset; onImageError?: (id: string) => void }) {
-  const hasGradient = !!asset.gradientStart && !!asset.gradientEnd;
-
-  return (
-    <div className="group relative h-24 w-40 shrink-0 flex items-center justify-center rounded-full bg-white border border-slate-200/60 shadow-sm hover:border-slate-300 transition-all overflow-hidden">
-      {hasGradient && (
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 scale-150 opacity-0 transition-all duration-500 ease-out group-hover:scale-100 group-hover:opacity-100 motion-reduce:transition-none"
-          style={{ backgroundImage: `linear-gradient(135deg, ${asset.gradientStart}, ${asset.gradientEnd})` }}
-        />
-      )}
-      <img
-        src={asset.imageUrl}
-        alt={asset.altText}
-        width={96}
-        height={40}
-        loading="lazy"
-        decoding="async"
-        referrerPolicy="no-referrer"
-        onError={() => onImageError?.(asset.id)}
-        className={clsx(
-          'relative z-10 h-auto w-auto max-h-10 max-w-[96px] object-contain transition-[filter] duration-300',
-          hasGradient && asset.invertOnHover && 'group-hover:brightness-0 group-hover:invert',
-        )}
-      />
-    </div>
-  );
-}
-
-function LogoMarquee() {
-  const { assets, status } = useLandingAssets();
-  const [failed, setFailed] = useState<Set<string>>(new Set());
-
-  const visible = useMemo(() => assets.filter((a) => !failed.has(a.id)), [assets, failed]);
-
-  // Render-only repetition so one half is wider than any screen. The database is never duplicated.
-  const half = useMemo(
-    () =>
-      visible.length ? Array.from({ length: Math.ceil(12 / visible.length) }, () => visible).flat() : [],
-    [visible],
-  );
-
-  if (status === 'loading') return <div className="mt-10 h-24" aria-hidden="true" />; // reserve space, no jump
-  if (half.length === 0) return null; // nothing active (or error) => whole section hidden
-
-  return (
-    <section aria-label="Partners and clients" className="mt-10">
-      <div className="mf-marquee">
-        <ul
-          className="mf-marquee-track"
-          style={{ '--mf-marquee-duration': `${Math.max(30, half.length * 4)}s` } as React.CSSProperties}
+        {/* Right Column - Mockup */}
+        <motion.div
+          initial={reduceMotion ? false : { opacity: 0, x: 24 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6, delay: reduceMotion ? 0 : 0.2, ease: [0.22, 1, 0.36, 1] }}
+          className="flex items-center justify-center lg:justify-end"
         >
-          {[0, 1].map((copy) =>
-            half.map((a, i) => (
-              <li key={`${copy}-${a.id}-${i}`} className="shrink-0 pr-4" aria-hidden={copy === 1 ? true : undefined}>
-                <LogoCard asset={a} onImageError={(id) => setFailed((s) => new Set(s).add(id))} />
-              </li>
-            )),
-          )}
-        </ul>
+          <div className="relative w-full max-w-[600px]">
+            {/* Browser Window Frame */}
+            <div className="overflow-hidden rounded-2xl border-2 border-[#E2D9C8] bg-white shadow-2xl">
+              {/* Browser Chrome */}
+              <div className="flex items-center gap-2 border-b border-[#E2D9C8] bg-[#FBF7EF] px-4 py-3">
+                <div className="flex gap-1.5">
+                  <span className="h-3 w-3 rounded-full bg-[#FF5F57]" aria-hidden="true" />
+                  <span className="h-3 w-3 rounded-full bg-[#FEBC2E]" aria-hidden="true" />
+                  <span className="h-3 w-3 rounded-full bg-[#28C840]" aria-hidden="true" />
+                </div>
+              </div>
+              {/* Content */}
+              <div className="aspect-[4/3] overflow-hidden bg-[#F6F1E8]">
+                {videoFailed || !videoUrl ? (
+                  <div className="flex h-full items-center justify-center p-8">
+                    <div className="text-center">
+                      <div className="mx-auto grid h-20 w-20 place-items-center rounded-2xl bg-[#F0E3D0]">
+                        <Database className="h-10 w-10 text-[#C8853F]" aria-hidden="true" />
+                      </div>
+                      <p className="mt-4 font-display text-xl font-bold text-[#1F2421]">MF MPanel Dashboard</p>
+                      <p className="mt-2 text-sm text-[#8A8A80]">Unified workflow management</p>
+                    </div>
+                  </div>
+                ) : (
+                  <video
+                    ref={(el) => {
+                      if (el) el.muted = true;
+                    }}
+                    className="h-full w-full object-cover"
+                    src={videoUrl}
+                    autoPlay={!reduceMotion}
+                    loop
+                    muted
+                    playsInline
+                    preload="metadata"
+                    onError={() => setVideoFailed(true)}
+                  />
+                )}
+              </div>
+            </div>
+            {/* Floating Status Chip */}
+            <motion.div
+              initial={reduceMotion ? false : { opacity: 0, y: 8, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.4, delay: reduceMotion ? 0 : 0.6 }}
+              className="absolute -bottom-4 right-4 flex items-center gap-2 rounded-xl border border-[#E2D9C8] bg-white px-4 py-2.5 shadow-lg"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              </span>
+              <span className="text-xs font-bold text-[#1F2421]">Active workflow · 47 min uptime</span>
+            </motion.div>
+          </div>
+        </motion.div>
       </div>
     </section>
   );
 }
 
 /* ================================================================== */
-/* Page                                                                */
+/* Stats Section                                                       */
 /* ================================================================== */
 
-const OVERVIEW: { icon: LucideIcon; title: string; body: React.ReactNode }[] = [
-  {
-    icon: Database,
-    title: 'Stable canonical identities',
-    body: (
-      <>
-        Profiles receive an immutable <code className="font-medium text-[#0a1b33]">profileId</code> and source
-        references. Posts link strictly as child records of their profile, so duplicate imports enrich history
-        without fracturing identities.
-      </>
-    ),
-  },
-  {
-    icon: Layers,
-    title: 'Controlled queue mechanics',
-    body: 'Searching Team hands profiles off into a capacity-controlled active queue. Checking Team closes every record with one of two outcomes: Verified or Failed / Blocked.',
-  },
-  {
-    icon: FileArchive,
-    title: 'Defensible ZIP matching',
-    body: (
-      <>
-        ZIP analysis maps screenshots to profiles using 5-priority identity rules, then produces clean packages
-        with <code className="font-medium text-[#0a1b33]">Link.txt</code> and{' '}
-        <code className="font-medium text-[#0a1b33]">Screenshots.zip</code>.
-      </>
-    ),
-  },
-];
+function StatsSection() {
+  const stats = [
+    { label: 'Profiles Managed', value: '10K+' },
+    { label: 'Records Verified', value: '25K+' },
+    { label: 'Team Members', value: '50+' },
+    { label: 'Uptime', value: '99.9%' },
+  ];
 
-const STEPS = [
-  {
-    title: 'Text extraction and registration',
-    text: 'Searching Team pastes WhatsApp or raw text. URLs are extracted and normalized, given a permanent PRF identity and SRC reference, and checked for duplicates.',
-  },
-  {
-    title: 'Queue handoff and capacity gate',
-    text: 'Eligible profiles move to the Checking Team queue while it stays within its configured capacity, preventing overflow and duplicate work.',
-  },
-  {
-    title: 'Verification and region mapping',
-    text: 'Checking Team records either Verified (with region and up to 3 post URLs) or Failed / Blocked (with an explanation).',
-  },
-  {
-    title: 'ZIP analysis and report packaging',
-    text: 'Uploaded archives are matched against Supabase workflow records. The system builds organized folders, each with Link.txt and Screenshots.zip.',
-  },
-];
+  return (
+    <section className="border-y border-[#E2D9C8] bg-white px-4 py-12 md:px-8">
+      <div className="mx-auto max-w-[1400px]">
+        <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+          {stats.map(({ label, value }) => (
+            <div key={label} className="text-center">
+              <p className="font-display text-4xl font-bold tracking-tight text-[#1F2421] md:text-5xl">{value}</p>
+              <p className="mt-2 text-sm font-semibold text-[#8A8A80]">{label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ================================================================== */
+/* Features Grid                                                       */
+/* ================================================================== */
+
+function FeaturesSection() {
+  const features = [
+    {
+      icon: Database,
+      title: 'Canonical Identity System',
+      desc: 'Every profile receives a permanent, immutable ID. Posts link as child records, preventing duplicate identities across imports.',
+    },
+    {
+      icon: Layers,
+      title: 'Controlled Queue Flow',
+      desc: 'Capacity-managed handoff between teams ensures no overflow. Every record closes with a clear outcome.',
+    },
+    {
+      icon: FileArchive,
+      title: 'Smart ZIP Analysis',
+      desc: 'Five-tier identity matching maps screenshots to profiles, producing clean report packages automatically.',
+    },
+    {
+      icon: Shield,
+      title: 'Role-Based Access',
+      desc: 'Granular permissions protect sensitive data. Audit trails track every action across the platform.',
+    },
+    {
+      icon: Zap,
+      title: 'Real-Time Updates',
+      desc: 'Supabase Realtime keeps dashboards synchronized. Changes propagate instantly across all team views.',
+    },
+    {
+      icon: Users,
+      title: 'Team Coordination',
+      desc: 'Separate workspaces for Searching, Checking, and Reports teams with dedicated admin controls.',
+    },
+  ];
+
+  return (
+    <section id="features" className="bg-[#F6F1E8] px-4 py-20 md:px-8 md:py-28">
+      <div className="mx-auto max-w-[1400px]">
+        <div className="text-center">
+          <h2 className="font-display text-[40px] font-bold leading-tight tracking-tight text-[#1F2421] md:text-[52px]">
+            Built for <em className="not-italic text-[#C8853F]">scale and precision</em>
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-[#8A8A80]">
+            One integrated pipeline from raw intake to verified evidence packaging.
+          </p>
+        </div>
+
+        <div className="mt-16 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {features.map(({ icon: Icon, title, desc }) => (
+            <div
+              key={title}
+              className="group rounded-2xl border border-[#E2D9C8] bg-white p-6 shadow-sm transition-all hover:border-[#C8853F] hover:shadow-lg hover:-translate-y-1"
+            >
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[#F0E3D0] text-[#C8853F] transition-colors group-hover:bg-[#C8853F] group-hover:text-white">
+                <Icon className="h-6 w-6" aria-hidden="true" />
+              </div>
+              <h3 className="mt-4 font-display text-xl font-bold text-[#1F2421]">{title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-[#8A8A80]">{desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ================================================================== */
+/* Workflow Steps                                                      */
+/* ================================================================== */
+
+function WorkflowSection() {
+  const steps = [
+    {
+      step: '01',
+      title: 'Text Extraction',
+      desc: 'Searching Team ingests WhatsApp/Telegram text. URLs are normalized and assigned permanent PRF identities.',
+    },
+    {
+      step: '02',
+      title: 'Queue Handoff',
+      desc: 'Eligible profiles flow into Checking queue while staying within configured capacity limits.',
+    },
+    {
+      step: '03',
+      title: 'Verification',
+      desc: 'Checking Team marks records Verified (with region + posts) or Failed/Blocked with reason.',
+    },
+    {
+      step: '04',
+      title: 'Report Generation',
+      desc: 'ZIP archives are matched to workflow records. Organized folders with Link.txt and Screenshots.zip.',
+    },
+  ];
+
+  return (
+    <section id="workflow" className="border-t border-[#E2D9C8] bg-white px-4 py-20 md:px-8 md:py-28">
+      <div className="mx-auto max-w-[1400px]">
+        <div className="text-center">
+          <h2 className="font-display text-[40px] font-bold leading-tight tracking-tight text-[#1F2421] md:text-[52px]">
+            How the <em className="not-italic text-[#C8853F]">workflow runs</em>
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-[#8A8A80]">
+            Every stage maintains identity integrity and logs all transitions for full audit trails.
+          </p>
+        </div>
+
+        <div className="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+          {steps.map(({ step, title, desc }, i) => (
+            <div key={step} className="relative">
+              <div className="rounded-2xl border border-[#E2D9C8] bg-[#FBF7EF] p-6">
+                <span className="font-display text-5xl font-bold tracking-tight text-[#F0E3D0]">{step}</span>
+                <h3 className="mt-3 font-display text-xl font-bold text-[#1F2421]">{title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-[#8A8A80]">{desc}</p>
+              </div>
+              {i < steps.length - 1 && (
+                <div className="absolute -right-4 top-1/2 hidden -translate-y-1/2 lg:block" aria-hidden="true">
+                  <ChevronRight className="h-6 w-6 text-[#E2D9C8]" />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ================================================================== */
+/* Tools/Modules List                                                  */
+/* ================================================================== */
+
+function ToolsSection({ signedIn }: { signedIn: boolean }) {
+  const routeFor = (m: ToolModule) => (signedIn ? m.route : `${ROUTES.login}?next=${encodeURIComponent(m.route)}`);
+
+  return (
+    <section className="bg-[#F6F1E8] px-4 py-20 md:px-8 md:py-28">
+      <div className="mx-auto max-w-[1200px]">
+        <div className="text-center">
+          <h2 className="font-display text-[40px] font-bold leading-tight tracking-tight text-[#1F2421] md:text-[52px]">
+            Integrated <em className="not-italic text-[#C8853F]">tools</em>
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-[#8A8A80]">
+            {signedIn ? 'Access is limited to approved tools for your account.' : 'Sign in to access the tools your team is approved for.'}
+          </p>
+        </div>
+
+        <div className="mt-12 space-y-4">
+          {MODULES.map((m) => {
+            const Icon = m.icon;
+            const live = m.status === 'available';
+            return (
+              <div key={m.key} className="overflow-hidden rounded-2xl border border-[#E2D9C8] bg-white shadow-sm transition-all hover:border-[#C8853F] hover:shadow-md">
+                <div className="flex flex-col gap-4 p-6 md:flex-row md:items-center md:gap-6">
+                  <div className="flex items-start gap-4 md:w-72 md:shrink-0">
+                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#F0E3D0] text-[#C8853F]">
+                      <Icon className="h-6 w-6" aria-hidden="true" />
+                    </div>
+                    <div>
+                      <h3 className="font-display text-lg font-bold text-[#1F2421]">{m.name}</h3>
+                      <p className="mt-0.5 text-xs font-semibold uppercase tracking-wider text-[#8A8A80]">{m.short}</p>
+                    </div>
+                  </div>
+                  <p className="flex-1 text-sm leading-relaxed text-[#8A8A80]">{m.desc}</p>
+                  <div className="md:shrink-0">
+                    {live ? (
+                      <Link
+                        to={routeFor(m)}
+                        className="inline-flex items-center gap-2 rounded-xl bg-[#C8853F] px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-[#A86B2C] hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8853F]"
+                      >
+                        {signedIn ? 'Open' : 'Sign in'}
+                        <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                      </Link>
+                    ) : (
+                      <span className="inline-flex items-center gap-2 rounded-xl bg-[#E2D9C8] px-5 py-2.5 text-sm font-bold text-[#8A8A80]">
+                        Coming soon
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ================================================================== */
+/* FAQ Section                                                         */
+/* ================================================================== */
+
+function FAQSection() {
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+  const faqs = [
+    {
+      q: 'What is MF MPanel?',
+      a: 'MF MPanel is a centralized workflow management system for coordinating digital records across Searching, Checking, and Reports teams. It maintains canonical profile identities and produces verified evidence packages.',
+    },
+    {
+      q: 'How does identity management work?',
+      a: 'Every profile receives a permanent PRF (Profile ID) upon registration. Posts are linked as child records, so duplicate imports enrich history without creating duplicate identities.',
+    },
+    {
+      q: 'What teams use this platform?',
+      a: 'Three primary teams: Searching (intake and URL extraction), Checking (queue verification), and Reports (ZIP analysis and packaging). Admin roles oversee system-wide operations.',
+    },
+    {
+      q: 'Is my data secure?',
+      a: 'Yes. Role-based access controls protect sensitive data. All actions are logged for audit trails. The platform runs on Supabase with enterprise-grade security.',
+    },
+    {
+      q: 'Can I integrate external apps?',
+      a: 'MF MPanel is built for future client integrations like the planned Evidence Android app. All apps share one Supabase backend with clear data contracts.',
+    },
+  ];
+
+  return (
+    <section id="faq" className="border-t border-[#E2D9C8] bg-white px-4 py-20 md:px-8 md:py-28">
+      <div className="mx-auto max-w-[900px]">
+        <div className="text-center">
+          <h2 className="font-display text-[40px] font-bold leading-tight tracking-tight text-[#1F2421] md:text-[52px]">
+            Frequently asked <em className="not-italic text-[#C8853F]">questions</em>
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-[#8A8A80]">
+            Everything you need to know about the platform.
+          </p>
+        </div>
+
+        <div className="mt-12 space-y-4">
+          {faqs.map(({ q, a }, i) => (
+            <div key={i} className="overflow-hidden rounded-2xl border border-[#E2D9C8] bg-[#FBF7EF]">
+              <button
+                onClick={() => setOpenIndex(openIndex === i ? null : i)}
+                className="flex w-full items-center justify-between gap-4 p-6 text-left transition-colors hover:bg-[#F0E3D0] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8853F]"
+              >
+                <span className="font-display text-lg font-bold text-[#1F2421]">{q}</span>
+                <ChevronDown
+                  className={clsx('h-5 w-5 shrink-0 text-[#C8853F] transition-transform', openIndex === i && 'rotate-180')}
+                  aria-hidden="true"
+                />
+              </button>
+              {openIndex === i && (
+                <div className="border-t border-[#E2D9C8] bg-white px-6 py-4">
+                  <p className="text-sm leading-relaxed text-[#8A8A80]">{a}</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ================================================================== */
+/* CTA Section                                                         */
+/* ================================================================== */
+
+function CTASection({ signedIn }: { signedIn: boolean }) {
+  return (
+    <section className="bg-[#2A2723] px-4 py-20 md:px-8 md:py-28">
+      <div className="mx-auto max-w-[1000px] text-center">
+        <h2 className="font-display text-[40px] font-bold leading-tight tracking-tight text-[#F6F1E8] md:text-[52px]">
+          Ready to <em className="not-italic text-[#C8853F]">streamline</em> your workflow?
+        </h2>
+        <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-[#E2D9C8]">
+          Join teams already coordinating their operations through MF MPanel.
+        </p>
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          {signedIn ? (
+            <Link
+              to={ROUTES.dashboard}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#C8853F] px-8 py-4 text-lg font-bold text-white shadow-lg transition-all hover:bg-[#A86B2C] hover:shadow-xl hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8853F]"
+            >
+              Open Dashboard
+              <ChevronRight className="h-5 w-5" aria-hidden="true" />
+            </Link>
+          ) : (
+            <>
+              <Link
+                to={ROUTES.signup}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#C8853F] px-8 py-4 text-lg font-bold text-white shadow-lg transition-all hover:bg-[#A86B2C] hover:shadow-xl hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8853F]"
+              >
+                Get Started Free
+                <ChevronRight className="h-5 w-5" aria-hidden="true" />
+              </Link>
+              <Link
+                to={ROUTES.login}
+                className="inline-flex items-center gap-2 rounded-xl border-2 border-[#E2D9C8] bg-transparent px-8 py-4 text-lg font-bold text-[#F6F1E8] transition-all hover:bg-[#E2D9C8]/10 hover:shadow-md hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8853F]"
+              >
+                Sign In
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ================================================================== */
+/* Footer                                                              */
+/* ================================================================== */
+
+function Footer() {
+  return (
+    <footer className="border-t border-[#E2D9C8] bg-[#FBF7EF] px-6 py-12 pb-[calc(3rem+env(safe-area-inset-bottom))]">
+      <div className="mx-auto max-w-[1400px]">
+        <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
+          <div className="flex items-center gap-2.5">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#2A2723] text-sm font-bold text-[#F6F1E8]" aria-hidden="true">
+              M
+            </span>
+            <span className="font-display text-lg font-bold text-[#1F2421]">MF MPanel</span>
+          </div>
+          <p className="text-sm text-[#8A8A80]">
+            © {new Date().getFullYear()} MF MPanel — Central Workflow Management System
+          </p>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+/* ================================================================== */
+/* Main Page Component                                                 */
+/* ================================================================== */
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuthUser();
   const settings = useLandingSettings();
-  const { assets: siteAssets } = useLandingAssets();
-  const reduceMotion = useReducedMotion();
-  const [info, setInfo] = useState<{ title: string; body: string } | null>(null);
 
   const signedIn = !!user;
-  useEffect(() => { if (!authLoading && signedIn) navigate('/dashboard', { replace: true }); }, [authLoading, signedIn, navigate]);
-  const contactTarget =
-    settings.contactUrl ?? (settings.contactEmail ? `mailto:${settings.contactEmail}` : undefined);
-
-  const openContact = () => {
-    if (!contactTarget) {
-      setInfo({
-        title: 'Contact details are not set up yet',
-        body: 'An administrator has not added contact details for this site. They can add them in the admin panel under Landing settings.',
-      });
-      return;
-    }
-    if (contactTarget.startsWith('mailto:')) window.location.href = contactTarget;
-    else window.open(contactTarget, '_blank', 'noopener,noreferrer');
-  };
-
-
-
-  const routeFor = (m: ToolModule) => (signedIn ? m.route : `${ROUTES.login}?next=${encodeURIComponent(m.route)}`);
-
-  const openModule = (m: ToolModule) => {
-    if (m.status !== 'available') return;
-    navigate(routeFor(m));
-  };
-
-  const scrollTop = () => window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+  useEffect(() => {
+    if (!authLoading && signedIn) navigate('/dashboard', { replace: true });
+  }, [authLoading, signedIn, navigate]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 font-sans text-[#0a1b33]">
+    <div className="flex min-h-screen flex-col bg-[#F6F1E8] font-sans text-[#1F2421]">
       <TopBar signedIn={signedIn} authLoading={authLoading} />
 
       <main>
-        <Hero videoUrl={settings.heroVideoUrl}>
-          <FloatingNav
-            modules={MODULES}
-            logoUrl={settings.logoUrl}
-            onLogo={scrollTop}
-            onOpenModule={openModule}
-          />
-        </Hero>
-
-        <LogoMarquee />
-
-        {/* Overview */}
-        <section id="overview" className="px-4 py-16 md:px-6 md:py-24">
-          <div className="mx-auto grid max-w-[1100px] gap-10 md:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] md:gap-16">
-            <div>
-              <h2 className="font-display text-[28px] font-medium leading-[1.1] tracking-tight md:text-[36px]">
-                Built for scale, precision, and permanent identity
-              </h2>
-              <p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-600">
-                One pipeline from raw intake to verified evidence packaging, replacing duplicate records and
-                fragmented spreadsheets.
-              </p>
-            </div>
-            <ul className="divide-y divide-slate-200/70 border-y border-slate-200/70">
-              {OVERVIEW.map(({ icon: Icon, title, body }) => (
-                <li key={title} className="flex gap-4 py-6">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-slate-200/60 bg-white text-[#0a1b33]">
-                    <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
-                  </span>
-                  <div>
-                    <h3 className="font-display text-base font-medium">{title}</h3>
-                    <p className="mt-1.5 max-w-prose text-[13px] leading-relaxed text-slate-600">{body}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
-        {/* Tools */}
-        <section id="tools" className="px-4 pb-16 md:px-6 md:pb-24">
-          <div className="mx-auto max-w-[1100px]">
-            <h2 className="font-display text-[28px] font-medium leading-[1.1] tracking-tight md:text-[36px]">
-              Tools in MF MPanel
-            </h2>
-            <p className="mt-3 max-w-md text-sm leading-relaxed text-slate-600">
-              {signedIn
-                ? 'Open a tool below. Access is limited to the tools your account is approved for.'
-                : 'Sign in to open the tools your team is approved for.'}
-            </p>
-
-            <ul className="mt-8 divide-y divide-slate-100 overflow-hidden rounded-[32px] border border-slate-200/60 bg-white shadow-[0_8px_30px_rgba(10,27,51,0.04)] max-md:rounded-[28px]">
-              {MODULES.map((m) => {
-                const Icon = m.icon;
-                const live = m.status === 'available';
-                return (
-                  <li key={m.key} className="flex flex-col gap-4 p-6 md:flex-row md:items-center md:gap-8 md:p-8">
-                    <div className="flex shrink-0 items-start gap-4 md:w-72">
-                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-slate-100 bg-slate-50 text-[#0a1b33]">
-                        <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
-                      </span>
-                      <div>
-                        <h3 className="font-display text-lg font-medium">{m.name}</h3>
-                        <div className="mt-1.5">
-                          <StatusBadge status={m.status} />
-                        </div>
-                      </div>
-                    </div>
-                    <p className="flex-1 text-[13px] leading-relaxed text-slate-600">{m.desc}</p>
-                    <div className="md:w-44 md:text-right">
-                      {live ? (
-                        <Link
-                          to={routeFor(m)}
-                          className={`inline-flex items-center gap-1 rounded-full text-[13px] font-semibold text-[#0a1b33] underline-offset-4 hover:underline ${FOCUS}`}
-                        >
-                          {signedIn ? `Open ${m.name}` : 'Sign in to open'}
-                          <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-                        </Link>
-                      ) : (
-                        <span className="text-[13px] text-slate-400">Not available yet</span>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        </section>
-
-        {/* Workflow */}
-        <section id="workflow" className="border-y border-slate-200/60 bg-white px-4 py-16 md:px-6 md:py-24">
-          <div className="mx-auto max-w-[1100px]">
-            <h2 className="font-display text-[28px] font-medium leading-[1.1] tracking-tight md:text-[36px]">
-              How the workflow runs
-            </h2>
-            <p className="mt-3 max-w-md text-sm leading-relaxed text-slate-600">
-              Every stage keeps identity intact and logs each transition so the whole path can be audited.
-            </p>
-
-            <ol className="mt-12 grid gap-10 md:grid-cols-4 md:gap-8">
-              {STEPS.map((s, i) => (
-                <li key={s.title} className="relative">
-                  <span className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 bg-white text-sm font-semibold">
-                    {i + 1}
-                  </span>
-                  {i < STEPS.length - 1 && (
-                    <span aria-hidden="true" className="absolute -right-8 left-12 top-[18px] hidden h-px bg-slate-200 md:block" />
-                  )}
-                  <h3 className="mt-4 font-display text-base font-medium">{s.title}</h3>
-                  <p className="mt-2 text-[13px] leading-relaxed text-slate-600">{s.text}</p>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </section>
-
-        {/* Architecture */}
-        <section id="architecture" className="px-3 py-12 md:px-6 md:py-20">
-          <div className="mx-auto max-w-[1400px] rounded-[40px] bg-[#0a152d] px-6 py-12 text-white max-md:rounded-[28px] md:px-16 md:py-16">
-            <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
-              <div>
-                <h2 className="font-display text-[28px] font-medium leading-[1.1] tracking-tight md:text-[36px]">
-                  Ready for external apps, without a second backend
-                </h2>
-                <p className="mt-4 max-w-lg text-sm leading-relaxed text-slate-300">
-                  MF MPanel is built so future client applications, such as the planned Evidence Android app, can
-                  sign in and work with the same data through authorized interfaces.
-                </p>
-                <ul className="mt-6 space-y-3 text-[13px] text-slate-300">
-                  {[
-                    'One shared Supabase backend: Auth, PostgreSQL, Realtime, Storage, and database operations.',
-                    'Clear data contracts for future Evidence Android capture integration.',
-                    'Role- and team-based access rules protect records and audit events.',
-                  ].map((t) => (
-                    <li key={t} className="flex items-start gap-2.5">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-blue-400" aria-hidden="true" />
-                      <span>{t}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="rounded-[28px] border border-white/10 bg-white/5 p-6">
-                <div className="mb-4 flex items-center gap-2 border-b border-white/10 pb-3 text-[13px] font-medium text-slate-200">
-                  <Smartphone className="h-4 w-4 text-blue-400" aria-hidden="true" />
-                  How the pieces connect
-                </div>
-                <dl className="space-y-3 text-[13px]">
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-3.5">
-                    <dt className="text-slate-400">Web portal</dt>
-                    <dd className="mt-0.5 font-medium text-white">MF MPanel central console</dd>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-3.5">
-                    <dt className="text-slate-400">Database</dt>
-                    <dd className="mt-0.5 font-medium text-white">
-                      Supabase PostgreSQL{}
-                    </dd>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-3.5">
-                    <dt className="text-slate-400">Future client</dt>
-                    <dd className="mt-0.5 font-medium text-white">MF Evidence Android app</dd>
-                  </div>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </section>
+        <Hero videoUrl={settings.heroVideoUrl} signedIn={signedIn} />
+        <StatsSection />
+        <FeaturesSection />
+        <WorkflowSection />
+        <ToolsSection signedIn={signedIn} />
+        <FAQSection />
+        <CTASection signedIn={signedIn} />
       </main>
 
-      <footer className="mt-auto border-t border-slate-200/60 bg-white px-6 py-8 pb-[calc(2rem+env(safe-area-inset-bottom))] text-xs text-slate-500">
-        <div className="mx-auto flex max-w-[1100px] flex-col items-center justify-between gap-3 sm:flex-row">
-          <span className="font-medium text-slate-700">
-            © {new Date().getFullYear()} MF MPanel — Central Workflow Management System
-          </span>
-        </div>
-      </footer>
-
-      <InfoDialog info={info} onClose={() => setInfo(null)} />
+      <Footer />
     </div>
   );
 };

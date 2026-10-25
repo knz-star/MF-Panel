@@ -14,7 +14,7 @@ import {
 import { listAllUsers, updateUserRoleAndModules } from '../../services/userService';
 import { useAuth } from '../auth/AuthContext';
 import { UserProfile, UserRole, AccountStatus, TeamKey } from '../../types/user';
-import { downloadUserPledgePdf } from '../../services/pledgePdfService';
+import { downloadUserPledgePdf, downloadAllUsersPledgesPdf } from '../../services/pledgePdfService';
 
 export const AdminUsersPage: React.FC = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -56,10 +56,6 @@ export const AdminUsersPage: React.FC = () => {
   };
 
   const handleDownloadPledge = async (user: UserProfile) => {
-    if (!user.pledgeAccepted || !user.pledgeSignature?.trim()) {
-      setMessage(`${user.displayName || user.email || 'This user'} has not submitted a signed pledge yet.`);
-      return;
-    }
     setDownloadingPledgeUid(user.uid);
     setMessage(null);
     try {
@@ -70,6 +66,21 @@ export const AdminUsersPage: React.FC = () => {
       setMessage(error instanceof Error ? `Pledge download failed: ${error.message}` : 'Pledge PDF could not be generated. Please retry.');
     } finally {
       setDownloadingPledgeUid(null);
+    }
+  };
+
+  const [downloadingAllPledges, setDownloadingAllPledges] = useState(false);
+  const handleDownloadAllPledges = async () => {
+    setDownloadingAllPledges(true);
+    setMessage(null);
+    try {
+      const count = await downloadAllUsersPledgesPdf(users);
+      setMessage(`All pledges PDF generated: ${count} submitted pledge(s) included, one page per user.`);
+    } catch (error) {
+      console.error('Admin bulk pledge download failed:', error);
+      setMessage(error instanceof Error ? `Pledge download failed: ${error.message}` : 'Pledges PDF could not be generated. Please retry.');
+    } finally {
+      setDownloadingAllPledges(false);
     }
   };
 
@@ -115,6 +126,7 @@ export const AdminUsersPage: React.FC = () => {
             Review accounts, approve or keep pending, and assign each standard user to one team.
           </p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={loadData}
           disabled={loading}
@@ -123,6 +135,15 @@ export const AdminUsersPage: React.FC = () => {
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           <span>Refresh Users</span>
         </button>
+        <button
+          onClick={() => void handleDownloadAllPledges()}
+          disabled={downloadingAllPledges || !users.length}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg transition-colors self-start sm:self-auto disabled:opacity-50"
+        >
+          <Download className="w-3.5 h-3.5" />
+          <span>{downloadingAllPledges ? 'Preparing all pledges…' : 'Download ALL Pledges (PDF)'}</span>
+        </button>
+        </div>
       </div>
 
       {message && (
@@ -184,7 +205,7 @@ export const AdminUsersPage: React.FC = () => {
             </div>
             <p className="text-xs text-slate-600">Signature: <span className="font-semibold text-slate-900">{editingUser.pledgeSignature?.trim() || 'Not available'}</span></p>
             <p className="text-xs text-slate-600">Submitted at: <span className="font-medium text-slate-900">{editingUser.pledgeAcceptedAt ? new Date(editingUser.pledgeAcceptedAt).toLocaleString() : 'Not available'}</span></p>
-            <button type="button" onClick={() => void handleDownloadPledge(editingUser)} disabled={!editingUser.pledgeAccepted || !editingUser.pledgeSignature?.trim() || downloadingPledgeUid === editingUser.uid} className="mt-2 inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"><Download className="h-4 w-4" />{downloadingPledgeUid === editingUser.uid ? 'Preparing PDF…' : 'Download signed pledge PDF'}</button>
+            <button type="button" onClick={() => void handleDownloadPledge(editingUser)} disabled={downloadingPledgeUid === editingUser.uid} className="mt-2 inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"><Download className="h-4 w-4" />{downloadingPledgeUid === editingUser.uid ? 'Preparing PDF…' : 'Download signed pledge PDF'}</button>
             <p className="text-[11px] leading-5 text-slate-500">Use this information as a review aid. Approval status is controlled separately below; this panel does not change the submitted pledge.</p>
           </section>
 
@@ -314,7 +335,7 @@ export const AdminUsersPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <button type="button" onClick={() => void handleDownloadPledge(u)} disabled={!u.pledgeAccepted || !u.pledgeSignature?.trim() || downloadingPledgeUid === u.uid} className="mr-1 inline-flex items-center gap-1 rounded px-2 py-1.5 text-slate-600 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-30" title={u.pledgeAccepted ? 'Download this user’s signed pledge PDF' : 'No submitted pledge'} aria-label={`Download pledge for ${u.displayName || u.email}`}><Download className="h-3.5 w-3.5" /></button>
+                      <button type="button" onClick={() => void handleDownloadPledge(u)} disabled={downloadingPledgeUid === u.uid} className="mr-1 inline-flex items-center gap-1 rounded px-2 py-1.5 text-slate-600 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-30" title="Download this user’s signed pledge PDF" aria-label={`Download pledge for ${u.displayName || u.email}`}><Download className="h-3.5 w-3.5" /></button>
                       <button
                         type="button"
                         onClick={() => handleStartEdit(u)}

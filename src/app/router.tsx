@@ -3,6 +3,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AppLayout } from '../components/layout/AppLayout';
 import { ProtectedRoute } from '../features/auth/ProtectedRoute';
 import { DashboardRedirect } from '../features/auth/DashboardRedirect';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 
 // Public pages
 import { LandingPage } from '../features/landing/LandingPage';
@@ -214,7 +215,7 @@ export const router = createBrowserRouter([
       },
 
       // Organization reports are separate from the admin-only ZIP Report Generator.
-      { path: '/admin/gender-teams', element: <ProtectedRoute><GenderTeamDashboardPage /></ProtectedRoute> },
+      { path: '/admin/gender-teams', element: <ProtectedRoute><ErrorBoundary fallbackTitle="Dashboard Error" fallbackMessage="The gender team dashboard encountered an error."><GenderTeamDashboardPage /></ErrorBoundary></ProtectedRoute> },
       { path: '/workspace/reports', element: <ProtectedRoute><OrganizationReportsPage /></ProtectedRoute> },
       { path: '/shared-reports', element: <Navigate to="/workspace/reports" replace /> },
 

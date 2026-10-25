@@ -1,3 +1,21 @@
+# Changelog
+
+## 2.16.0 — Admin pledge downloads fixed, Admin Dashboard team-work view, Searching post-link tracking
+- Pledge: Admin can now download EVERY user's signed pledge. Root cause chain fixed on both sides — the Admin list row could be stale and hide a submitted pledge (buttons stayed disabled), and the backend user-list/pledge functions are re-issued in the new backend fix file. The PDF service now re-resolves the freshest profile before generating, per-user buttons are no longer blocked by stale row data, and a new **Download ALL Pledges (PDF)** button on Admin → Users exports one PDF with one page per user. The long-standing pledgePdfService TS2322 lint error is also fixed — lint is fully clean now.
+- Admin Dashboard: new **Team Work** panel — Searching / Checking / Reports / Evidence work split by Male Team and Female Team with total numbers, plus Total Work / Completed / Failed / Active Members. Period switch: **Daily / 7 Days / All**, computed from the team-analytics daily series and member totals.
+- Admin Dashboard shortcuts: every admin page now has a button — added Link Management, Team Analytics, Male & Female Teams, Checking Results, Evidence Connections, Evidence Operations and System Health cards (previously only reachable from menus).
+- Searching intake: post links are now tracked as POSTS, not profiles. The website already classified each pasted URL (profile vs post) but never sent the type, and the backend ingest stored every link as a profile. Frontend now sends the link type; the backend fix file re-issues the ingest action with server-side classification, real duplicate detection (database + same batch) and invalid counting, correct 'posts' storage, and separate profile/post counts in the result.
+- Backend: NEW migration `20261025120000_backend_fixes_pledge_and_ingest.sql` — also delivered to the owner as a standalone file `MF-MPanel-BACKEND-FIX-v2.16.0.sql` to run once in the Supabase SQL Editor (idempotent). It contains: mfp_save_pledge + mfp_admin_list_users (with preferences) re-issue, and the full mfp_web_api re-issue with only the ingestLinks action changed.
+
+
+## 2.15.0 — Professional UI refresh, gender-separated teams, WhatsApp Support
+- UI: fully redesigned professional landing page (new hero, features, how-it-works, stats, FAQ, footer) on one consistent modern design system; the old landing design is removed. Existing landing data hooks and routes are unchanged.
+- Crash fix: the Male/Female Team Dashboard could crash/loop because its data refresh callback re-created itself whenever it updated the selected group state, and dashboard rendering assumed API data was always present. Refresh now takes the group as a parameter (no state loop), rendering is null-safe with empty states, and the gender-teams route is wrapped in an error boundary with a friendly fallback.
+- Teams: Male and Female teams are fully separated — the admin assignment dropdown for each group lists only admins of the matching gender (gender_group, then gender) and a mismatched assignment is refused; each group keeps its own lead and its own per-group dashboard view; group leads only see their own group.
+- WhatsApp Support: each gender group's Team Admin (or Main Admin) can set/update a WhatsApp support number and label from the group dashboard ("WhatsApp Support" card). Members of that group see a WhatsApp Support button on their Checking, Searching, Reports and Evidence dashboards that opens wa.me/<number>. No number set = no button; groups never see each other's number.
+- Pledge: unchanged — Main Admin per-user signed pledge PDF download works as before.
+- No database migration required (support contacts use the existing settings document store: settings/support-male, settings/support-female).
+
 ## 2.14.16 — Faster Link Management deletion
 - Replaced one-request-per-link deletion with batched Supabase deletes (up to 200 IDs per request) and bounded parallel processing.
 - Verifies deletion in batches and preserves IDs of records that remain or cannot be verified.

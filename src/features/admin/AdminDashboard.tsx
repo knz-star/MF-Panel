@@ -16,6 +16,12 @@ import {
   Activity,
   RotateCcw,
   ArrowRight,
+  Link2,
+  BarChart3,
+  ClipboardCheck,
+  Plug,
+  Workflow,
+  HeartPulse,
 } from 'lucide-react';
 import { listProfiles } from '../../services/profileService';
 import { listAllPosts } from '../../services/postService';
@@ -24,6 +30,7 @@ import { listReportJobs } from '../../services/reportService';
 import { listAllUsers } from '../../services/userService';
 import { listAuditLogs } from '../../services/workflowService';
 import { UserProfile } from '../../types/user';
+import { AdminTeamWorkPanel } from './AdminTeamWorkPanel';
 import { ProfileRecord } from '../../types/profile';
 
 export const AdminDashboard: React.FC = () => {
@@ -176,6 +183,9 @@ export const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Team Work by gender group + period */}
+      <AdminTeamWorkPanel />
+
       {/* Global Record Search */}
       <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-2xs space-y-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -239,7 +249,7 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Admin Modules Quick Jump */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <Link
           to="/admin/users"
           className="p-5 bg-white/90 rounded-[24px] border border-white hover:border-blue-100 hover:shadow-lg transition-all flex flex-col justify-between"
@@ -274,6 +284,140 @@ export const AdminDashboard: React.FC = () => {
           </div>
           <div className="mt-4 text-xs font-semibold text-blue-700 flex items-center gap-1">
             <span>Review Duplicates</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </div>
+        </Link>
+
+
+        <Link
+          to="/admin/links"
+          className="p-5 bg-white/90 rounded-[24px] border border-white hover:border-blue-100 hover:shadow-lg transition-all flex flex-col justify-between"
+        >
+          <div>
+            <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center mb-3">
+              <Link2 className="w-5 h-5" />
+            </div>
+            <h3 className="text-sm font-bold text-slate-950 mb-1">Link Management</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Search, filter, export and batch-manage every tracked profile and post link.
+            </p>
+          </div>
+          <div className="mt-4 text-xs font-semibold text-blue-700 flex items-center gap-1">
+            <span>Manage Links</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </div>
+        </Link>
+
+        <Link
+          to="/admin/analytics"
+          className="p-5 bg-white/90 rounded-[24px] border border-white hover:border-blue-100 hover:shadow-lg transition-all flex flex-col justify-between"
+        >
+          <div>
+            <div className="w-9 h-9 rounded-lg bg-violet-50 text-violet-700 flex items-center justify-center mb-3">
+              <BarChart3 className="w-5 h-5" />
+            </div>
+            <h3 className="text-sm font-bold text-slate-950 mb-1">Team Analytics</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Per-team scores, member performance, daily trends and low-score warnings.
+            </p>
+          </div>
+          <div className="mt-4 text-xs font-semibold text-blue-700 flex items-center gap-1">
+            <span>Open Analytics</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </div>
+        </Link>
+
+        <Link
+          to="/admin/gender-teams"
+          className="p-5 bg-white/90 rounded-[24px] border border-white hover:border-blue-100 hover:shadow-lg transition-all flex flex-col justify-between"
+        >
+          <div>
+            <div className="w-9 h-9 rounded-lg bg-pink-50 text-pink-700 flex items-center justify-center mb-3">
+              <Users className="w-5 h-5" />
+            </div>
+            <h3 className="text-sm font-bold text-slate-950 mb-1">Male & Female Teams</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Gender-group dashboards, group leads, member work and WhatsApp Support numbers.
+            </p>
+          </div>
+          <div className="mt-4 text-xs font-semibold text-blue-700 flex items-center gap-1">
+            <span>Open Gender Teams</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </div>
+        </Link>
+
+        <Link
+          to="/admin/checking-results"
+          className="p-5 bg-white/90 rounded-[24px] border border-white hover:border-blue-100 hover:shadow-lg transition-all flex flex-col justify-between"
+        >
+          <div>
+            <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center mb-3">
+              <ClipboardCheck className="w-5 h-5" />
+            </div>
+            <h3 className="text-sm font-bold text-slate-950 mb-1">Checking Results</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Review verified, invalid and blocked outcomes recorded by the Checking team.
+            </p>
+          </div>
+          <div className="mt-4 text-xs font-semibold text-blue-700 flex items-center gap-1">
+            <span>View Results</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </div>
+        </Link>
+
+        <Link
+          to="/admin/evidence-connections"
+          className="p-5 bg-white/90 rounded-[24px] border border-white hover:border-blue-100 hover:shadow-lg transition-all flex flex-col justify-between"
+        >
+          <div>
+            <div className="w-9 h-9 rounded-lg bg-cyan-50 text-cyan-700 flex items-center justify-center mb-3">
+              <Plug className="w-5 h-5" />
+            </div>
+            <h3 className="text-sm font-bold text-slate-950 mb-1">Evidence Connections</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Android app linking status and evidence-team device connections.
+            </p>
+          </div>
+          <div className="mt-4 text-xs font-semibold text-blue-700 flex items-center gap-1">
+            <span>Open Connections</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </div>
+        </Link>
+
+        <Link
+          to="/admin/evidence-operations"
+          className="p-5 bg-white/90 rounded-[24px] border border-white hover:border-blue-100 hover:shadow-lg transition-all flex flex-col justify-between"
+        >
+          <div>
+            <div className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center mb-3">
+              <Workflow className="w-5 h-5" />
+            </div>
+            <h3 className="text-sm font-bold text-slate-950 mb-1">Evidence Operations</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Evidence assignment operations, queues and processing controls.
+            </p>
+          </div>
+          <div className="mt-4 text-xs font-semibold text-blue-700 flex items-center gap-1">
+            <span>Open Operations</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </div>
+        </Link>
+
+        <Link
+          to="/admin/system-health"
+          className="p-5 bg-white/90 rounded-[24px] border border-white hover:border-blue-100 hover:shadow-lg transition-all flex flex-col justify-between"
+        >
+          <div>
+            <div className="w-9 h-9 rounded-lg bg-rose-50 text-rose-700 flex items-center justify-center mb-3">
+              <HeartPulse className="w-5 h-5" />
+            </div>
+            <h3 className="text-sm font-bold text-slate-950 mb-1">System Health</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Backend connectivity, service status and platform health checks.
+            </p>
+          </div>
+          <div className="mt-4 text-xs font-semibold text-blue-700 flex items-center gap-1">
+            <span>Check Health</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </div>
         </Link>

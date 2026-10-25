@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Activity, AlertTriangle, CheckCircle2, Clock3, Link2, RefreshCw, ShieldAlert, Smartphone, TrendingUp, ClipboardList } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { WhatsAppSupportForCurrentUser } from '../../components/WhatsAppSupportButton';
 import { getAdminEvidencePerformance, getEvidencePerformance, type AdminEvidencePerformance, type EvidencePerformance, type EvidencePeriod } from '../../services/evidencePerformanceService';
 
 const periods: Array<{ value: EvidencePeriod; label: string }> = [
@@ -44,7 +45,7 @@ export const EvidencePerformanceDashboard: React.FC = () => {
   const maxBar = Math.max(1, ...(mine?.series || []).map(x => Math.max(x.assigned, x.completed, x.failed)));
   const visibleSeries = (mine?.series || []).slice(-(period === 'days90' ? 30 : 14));
 
-  return <div className="space-y-5">
+  return <div className="space-y-5"><div className="flex justify-end"><WhatsAppSupportForCurrentUser/></div>
     <section className="overflow-hidden rounded-3xl bg-slate-950 p-5 text-white shadow-sm sm:p-7">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div><div className="flex items-center gap-2 text-emerald-300"><Activity className="h-4 w-4"/><p className="text-[11px] font-bold uppercase tracking-[.18em]">MF Evidence · Performance</p></div><h2 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">Work & activity analytics</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">Assigned, completed, pending links, platform breakdown and the rolling activity score from synced application events.</p></div>
