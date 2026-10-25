@@ -20,6 +20,7 @@ import {
   Zap,
   type LucideIcon,
 } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 import {
   logout,
   useAuthUser,
@@ -111,6 +112,7 @@ function TopBar({ signedIn, authLoading }: { signedIn: boolean; authLoading: boo
           <a href="#features" className={link}>Features</a>
           <a href="#workflow" className={link}>Workflow</a>
           <a href="#faq" className={link}>FAQ</a>
+          <Link to="/track" className={link}>Global Tracker</Link>
         </nav>
 
         <div className="flex min-h-10 shrink-0 items-center gap-2">
@@ -204,6 +206,12 @@ function Hero({ videoUrl, signedIn }: { videoUrl?: string; signedIn: boolean }) 
                 >
                   Sign In
                 </Link>
+                <Link
+                  to="/track"
+                  className="inline-flex items-center gap-2 rounded-xl border-2 border-[#C8853F]/40 bg-[#F0E3D0] px-6 py-3.5 text-base font-bold text-[#8B5628] transition-all hover:border-[#C8853F] hover:shadow-md hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8853F]"
+                >
+                  <Search className="h-5 w-5" aria-hidden="true" /> Track a Link
+                </Link>
               </>
             )}
           </div>
@@ -282,7 +290,7 @@ function Hero({ videoUrl, signedIn }: { videoUrl?: string; signedIn: boolean }) 
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
               </span>
-              <span className="text-xs font-bold text-[#1F2421]">Active workflow · 47 min uptime</span>
+              <span className="text-xs font-bold text-[#1F2421]">Live workflow · roadmap tracking</span>
             </motion.div>
           </div>
         </motion.div>
@@ -296,11 +304,39 @@ function Hero({ videoUrl, signedIn }: { videoUrl?: string; signedIn: boolean }) 
 /* ================================================================== */
 
 function StatsSection() {
+  const [metrics, setMetrics] = useState<{ totalLinks: number; checkedLinks: number; evidenceAnalyzed: number } | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    const refresh = async () => {
+      const { data, error } = await supabase.rpc('mfp_public_landing_metrics');
+      if (!alive || error || !data) return;
+      setMetrics({
+        totalLinks: Number(data.totalLinks ?? 0),
+        checkedLinks: Number(data.checkedLinks ?? 0),
+        evidenceAnalyzed: Number(data.evidenceAnalyzed ?? 0),
+      });
+      setLastUpdated(new Date());
+    };
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 30_000);
+    // Realtime is an acceleration path; the 30-second refresh remains as fallback.
+    channel = supabase.channel('public-landing-live-metrics')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'mfp_documents' }, () => void refresh())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'mfp_checking_assignments' }, () => void refresh())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'mfp_link_upload_receipts' }, () => void refresh())
+      .subscribe();
+    return () => { alive = false; window.clearInterval(timer); if (channel) void supabase.removeChannel(channel); };
+  }, []);
+
+  const formatCount = (value: number | undefined) => value === undefined ? '—' : new Intl.NumberFormat().format(value);
   const stats = [
-    { label: 'Profiles Managed', value: '10K+' },
-    { label: 'Records Verified', value: '25K+' },
-    { label: 'Team Members', value: '50+' },
-    { label: 'Uptime', value: '99.9%' },
+    { label: 'Links Indexed', value: formatCount(metrics?.totalLinks) },
+    { label: 'Links Checked', value: formatCount(metrics?.checkedLinks) },
+    { label: 'Evidence ZIPs Analyzed', value: formatCount(metrics?.evidenceAnalyzed) },
+    { label: 'Global Tracker', value: 'Live' },
   ];
 
   return (
@@ -309,11 +345,14 @@ function StatsSection() {
         <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
           {stats.map(({ label, value }) => (
             <div key={label} className="text-center">
-              <p className="font-display text-4xl font-bold tracking-tight text-[#1F2421] md:text-5xl">{value}</p>
+              <p aria-live="polite" className="font-display text-4xl font-bold tracking-tight text-[#1F2421] md:text-5xl">{value}</p>
               <p className="mt-2 text-sm font-semibold text-[#8A8A80]">{label}</p>
             </div>
           ))}
         </div>
+        <p className="mt-6 text-center text-xs text-[#8A8A80]">
+          {lastUpdated ? `Live data · updated ${lastUpdated.toLocaleTimeString()}` : 'Connecting to live database metrics…'}
+        </p>
       </div>
     </section>
   );

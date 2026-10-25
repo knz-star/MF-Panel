@@ -1,165 +1,63 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { BarChart3, RefreshCw, AlertTriangle } from 'lucide-react';
-import { getTeamAnalytics, type TeamAnalyticsData, type ManagedTeam } from '../../services/teamAnalyticsService';
-import { listAllUsers } from '../../services/userService';
-import type { UserProfile } from '../../types/user';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Activity, AlertTriangle, BarChart3, RefreshCw } from 'lucide-react';
+import { getDashboardMetrics, type DashboardMetrics, type DashboardDailyMetric } from '../../services/dashboardMetricsService';
+import { SearchingContributorTable } from './SearchingContributorTable';
 
 type Period = 'daily' | 'week' | 'all';
-const TEAMS: Array<{ key: ManagedTeam; label: string }> = [
-  { key: 'searching', label: 'Searching Team' },
-  { key: 'checking', label: 'Checking Team' },
-  { key: 'reports', label: 'Reports Team' },
-  { key: 'evidence', label: 'Evidence Team' },
-];
+const TEAMS = [
+  { key: 'searching', label: 'Searching Team', metric: 'Links collected', color: '#C8853F' },
+  { key: 'checking', label: 'Checking Team', metric: 'Links checked', color: '#4777B8' },
+  { key: 'evidence', label: 'Evidence Team', metric: 'Links assigned', color: '#56866B' },
+  { key: 'reports', label: 'Report Team', metric: 'Included with Evidence ZIP analysis', color: '#8A8176' },
+] as const;
+const n = (value: number) => value.toLocaleString();
+const today = () => new Date().toISOString().slice(0, 10);
 
-interface TeamRow {
-  team: ManagedTeam;
-  label: string;
-  maleWork: number;
-  femaleWork: number;
-  totalWork: number;
-  completed: number;
-  failed: number;
-}
-
-/**
- * Admin overview of team work: per team (Searching / Checking / Reports /
- * Evidence), split by Male / Female gender groups, with totals.
- * Periods: Daily = latest recorded day, 7 Days = last 7 recorded days,
- * All = all-time totals from the team analytics data.
- */
 export const AdminTeamWorkPanel: React.FC = () => {
   const [period, setPeriod] = useState<Period>('daily');
-  const [data, setData] = useState<TeamAnalyticsData | null>(null);
-  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [data, setData] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true); setError('');
-    try {
-      const [analytics, userList] = await Promise.all([getTeamAnalytics(14), listAllUsers(300)]);
-      setData(analytics); setUsers(userList);
-    } catch (err) {
-      console.error('Admin team work panel failed:', err);
-      setError(err instanceof Error ? err.message : 'Team work data could not load.');
-    } finally { setLoading(false); }
+    try { const metrics = await getDashboardMetrics(7); setData(metrics); }
+    catch (e) { setError(e instanceof Error ? e.message : 'Team metrics could not load.'); }
+    finally { setLoading(false); }
+  }, []);
+  useEffect(() => { void load(); const id = window.setInterval(() => void load(), 30000); return () => window.clearInterval(id); }, [load]);
+
+  const selectedDays = useMemo(() => {
+    const rows = data?.daily ?? [];
+    if (period === 'daily') return rows.filter(d => d.date === today());
+    return rows;
+  }, [data, period]);
+  const metricFor = (team: typeof TEAMS[number], row: DashboardDailyMetric) => {
+    if (team.key === 'searching') return row.searchingTotal;
+    if (team.key === 'checking') return row.checkingChecked;
+    if (team.key === 'evidence') return row.evidenceAssigned;
+    return 0;
   };
-  useEffect(() => { void load(); }, []);
-
-  const genderByUser = useMemo(() => {
-    const map = new Map<string, 'male' | 'female' | null>();
-    for (const u of users) {
-      const g = (u.genderGroup || u.gender || '').toLowerCase();
-      map.set(u.uid, g === 'male' ? 'male' : g === 'female' ? 'female' : null);
-    }
-    return map;
-  }, [users]);
-
-  const latestDate = useMemo(() => {
-    let max = '';
-    for (const m of data?.members ?? []) for (const d of m.daily ?? []) if (d.date > max) max = d.date;
-    return max;
-  }, [data]);
-
-  const memberPeriodWork = (m: TeamAnalyticsData['members'][number]): { work: number; completed: number; failed: number } => {
+  const totalFor = (team: typeof TEAMS[number]) => {
+    if (!data) return 0;
     if (period === 'all') {
-      const completed = m.completed ?? 0; const failed = m.failed ?? 0;
-      return { work: completed + failed, completed, failed };
+      if (team.key === 'searching') return data.totals.totalLinks;
+      if (team.key === 'checking') return data.totals.checkingChecked;
+      if (team.key === 'evidence') return data.totals.evidenceAssigned;
+      return 0;
     }
-    const daily = m.daily ?? [];
-    let entries = daily;
-    if (period === 'daily') entries = daily.filter((d) => d.date === latestDate);
-    if (period === 'week') {
-      const cutoff = new Date(latestDate || new Date().toISOString());
-      cutoff.setDate(cutoff.getDate() - 6);
-      const cutoffStr = cutoff.toISOString().slice(0, 10);
-      entries = daily.filter((d) => d.date >= cutoffStr && d.date <= latestDate);
-    }
-    const completed = entries.reduce((s, d) => s + (d.completed ?? 0), 0);
-    const failed = entries.reduce((s, d) => s + (d.failed ?? 0), 0);
-    return { work: completed + failed, completed, failed };
+    return selectedDays.reduce((sum, day) => sum + metricFor(team, day), 0);
   };
+  const maxDaily = Math.max(1, ...(data?.daily.flatMap(d => [d.searchingTotal,d.checkingChecked,d.evidenceAssigned,d.evidenceCompleted]) ?? [1]));
 
-  const rows: TeamRow[] = useMemo(() => TEAMS.map(({ key, label }) => {
-    const row: TeamRow = { team: key, label, maleWork: 0, femaleWork: 0, totalWork: 0, completed: 0, failed: 0 };
-    for (const m of data?.members ?? []) {
-      if (m.team !== key) continue;
-      const w = memberPeriodWork(m);
-      row.totalWork += w.work; row.completed += w.completed; row.failed += w.failed;
-      const g = genderByUser.get(m.userId);
-      if (g === 'male') row.maleWork += w.work;
-      if (g === 'female') row.femaleWork += w.work;
-    }
-    return row;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [data, genderByUser, period, latestDate]);
-
-  const totals = useMemo(() => {
-    const t = { work: 0, completed: 0, failed: 0, male: 0, female: 0, activeMembers: 0 };
-    for (const r of rows) { t.work += r.totalWork; t.completed += r.completed; t.failed += r.failed; t.male += r.maleWork; t.female += r.femaleWork; }
-    const active = new Set<string>();
-    for (const m of data?.members ?? []) if (memberPeriodWork(m).work > 0) active.add(m.userId);
-    t.activeMembers = active.size;
-    return t;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, data, period, latestDate]);
-
-  const periodLabel = period === 'daily' ? `Daily${latestDate ? ` · ${latestDate}` : ''}` : period === 'week' ? 'Last 7 days' : 'All time';
-
-  return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-900"><BarChart3 className="h-4 w-4 text-blue-700" /> Team Work — Male / Female Teams</h2>
-          <p className="mt-1 text-xs leading-5 text-slate-500">Har team ka kaam gender group ke hisaab se, total numbers ke saath. Work = completed + failed links. Jis member ka gender record nahi, wo sirf Total me ginna jata hai.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex rounded-xl border border-slate-200 bg-slate-50 p-1">
-            {([['daily', 'Daily'], ['week', '7 Days'], ['all', 'All']] as Array<[Period, string]>).map(([key, label]) => (
-              <button key={key} onClick={() => setPeriod(key)} className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${period === key ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-white'}`}>{label}</button>
-            ))}
-          </div>
-          <button onClick={() => void load()} disabled={loading} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 disabled:opacity-50" aria-label="Refresh team work"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /></button>
-        </div>
-      </div>
-
-      {error ? (
-        <div role="alert" className="mt-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>Team work data load nahi hua: {error}<br /><span className="text-xs">Agar ye pehli dafa hai, to di gayi backend fix file (SQL) Supabase me run karein — team analytics RPC usi se active hota hai.</span></span></div>
-      ) : (
-        <>
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {[[totals.work, 'Total Work'], [totals.completed, 'Completed'], [totals.failed, 'Failed / Blocked'], [totals.activeMembers, 'Active Members']].map(([n, label]) => (
-              <div key={String(label)} className="rounded-2xl border border-slate-100 bg-slate-50 p-4"><p className="text-2xl font-bold tabular-nums text-slate-950">{loading ? '—' : Number(n).toLocaleString()}</p><p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label} · {periodLabel}</p></div>
-            ))}
-          </div>
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead><tr className="border-b border-slate-200 text-[11px] uppercase tracking-wide text-slate-500"><th className="py-2 pr-3 font-bold">Team</th><th className="py-2 px-3 text-right font-bold">Male Team Work</th><th className="py-2 px-3 text-right font-bold">Female Team Work</th><th className="py-2 px-3 text-right font-bold">Total Work</th><th className="py-2 px-3 text-right font-bold">Completed</th><th className="py-2 pl-3 text-right font-bold">Failed</th></tr></thead>
-              <tbody className="divide-y divide-slate-100">
-                {rows.map((r) => (
-                  <tr key={r.team} className="text-slate-700">
-                    <td className="py-2.5 pr-3 font-semibold text-slate-950">{r.label}</td>
-                    <td className="py-2.5 px-3 text-right tabular-nums">{loading ? '—' : r.maleWork.toLocaleString()}</td>
-                    <td className="py-2.5 px-3 text-right tabular-nums">{loading ? '—' : r.femaleWork.toLocaleString()}</td>
-                    <td className="py-2.5 px-3 text-right font-bold tabular-nums text-slate-950">{loading ? '—' : r.totalWork.toLocaleString()}</td>
-                    <td className="py-2.5 px-3 text-right tabular-nums text-emerald-700">{loading ? '—' : r.completed.toLocaleString()}</td>
-                    <td className="py-2.5 pl-3 text-right tabular-nums text-rose-700">{loading ? '—' : r.failed.toLocaleString()}</td>
-                  </tr>
-                ))}
-                <tr className="bg-slate-50 font-bold text-slate-950">
-                  <td className="py-2.5 pr-3">TOTAL</td>
-                  <td className="py-2.5 px-3 text-right tabular-nums">{loading ? '—' : totals.male.toLocaleString()}</td>
-                  <td className="py-2.5 px-3 text-right tabular-nums">{loading ? '—' : totals.female.toLocaleString()}</td>
-                  <td className="py-2.5 px-3 text-right tabular-nums">{loading ? '—' : totals.work.toLocaleString()}</td>
-                  <td className="py-2.5 px-3 text-right tabular-nums">{loading ? '—' : totals.completed.toLocaleString()}</td>
-                  <td className="py-2.5 pl-3 text-right tabular-nums">{loading ? '—' : totals.failed.toLocaleString()}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
-    </section>
-  );
+  return <section className="rounded-2xl border border-[#E2D9C8] bg-[#FBF7EF] p-5 shadow-sm sm:p-6">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div><h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-[#1F2421]"><BarChart3 className="h-4 w-4 text-[#C8853F]"/>Team Operations · Live Counts</h2><p className="mt-1 text-xs leading-5 text-[#716D64]">Actual database records only. Searching counts intake, Checking counts completed checks, and Evidence counts assigned links. Report work is counted through Evidence ZIP analysis—not as a separate completed team.</p></div>
+      <div className="flex items-center gap-2"><div className="flex rounded-xl border border-[#E2D9C8] bg-white p-1">{([['daily','Today'],['week','7 Days'],['all','All Time']] as Array<[Period,string]>).map(([key,label])=><button key={key} onClick={()=>setPeriod(key)} className={`rounded-lg px-3 py-1.5 text-xs font-bold ${period===key?'bg-[#2A2723] text-white':'text-[#716D64] hover:bg-[#F6F1E8]'}`}>{label}</button>)}</div><button onClick={()=>void load()} disabled={loading} aria-label="Refresh live team metrics" className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[#E2D9C8] bg-white text-[#716D64] disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${loading?'animate-spin':''}`}/></button></div>
+    </div>
+    {error ? <div role="alert" className="mt-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0"/>{error}</div> : <>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{TEAMS.map(team=><article key={team.key} className="rounded-2xl border border-[#E2D9C8] bg-white p-4"><div className="flex items-center justify-between gap-2"><p className="text-xs font-bold text-[#716D64]">{team.label}</p><span className="h-2.5 w-2.5 rounded-full" style={{background:team.color}}/></div><p className="mt-2 text-2xl font-extrabold tabular-nums text-[#1F2421]">{loading?'—':team.key==='reports'?'—':n(totalFor(team))}</p><p className="mt-1 text-[11px] text-[#716D64]">{team.metric}</p>{team.key==='searching'&&<p className="mt-2 text-[10px] text-[#8A8176]">All-time total: {loading?'—':n(data?.totals.totalLinks??0)}</p>}{team.key==='checking'&&<p className="mt-2 text-[10px] text-[#8A8176]">Verified {loading?'—':n(data?.totals.checkingVerified??0)} · Failed/blocked {loading?'—':n(data?.totals.checkingFailed??0)}</p>}{team.key==='evidence'&&<p className="mt-2 text-[10px] text-[#8A8176]">ZIP-analyzed: {loading?'—':n(data?.totals.evidenceCompleted??0)}</p>}</article>)}</div>
+      <div className="mt-5 rounded-2xl border border-[#E2D9C8] bg-white p-4"><div className="flex items-center justify-between gap-3"><div><h3 className="text-sm font-bold text-[#1F2421]">7-day workflow activity</h3><p className="mt-1 text-xs text-[#716D64]">Daily intake, completed checks and Evidence assignments</p></div><span className="inline-flex items-center gap-1 text-[10px] text-[#8A8176]"><Activity className="h-3.5 w-3.5"/>Refreshes every 30s</span></div><div className="mt-4 grid grid-cols-7 gap-2">{(data?.daily??[]).map(day=><div key={day.date} className="min-w-0"><div className="flex h-32 items-end justify-center gap-1 rounded-lg bg-[#F6F1E8] px-1 pb-1 pt-2">{[day.searchingTotal,day.checkingChecked,day.evidenceAssigned,day.evidenceCompleted].map((value,i)=><div key={i} title={`${['Searching links','Checked links','Evidence assignments','Evidence ZIP analyzed'][i]}: ${value}`} className="w-1/4 rounded-t-sm" style={{height:`${Math.max(value?4:0,value/maxDaily*100)}%`,background:['#C8853F','#4777B8','#56866B','#8B6DB0'][i],opacity:value?1:.15}}/>)}</div><p className="mt-1 truncate text-center text-[9px] text-[#8A8176]">{day.date.slice(5)}</p></div>)}</div><div className="mt-3 flex flex-wrap gap-4">{[{label:'Searching links',color:'#C8853F'},{label:'Checked links',color:'#4777B8'},{label:'Evidence assignments',color:'#56866B'},{label:'Evidence ZIP analyzed',color:'#8B6DB0'}].map(item=><span key={item.label} className="inline-flex items-center gap-2 text-xs font-semibold text-[#716D64]"><span className="h-2.5 w-2.5 rounded-sm" style={{background:item.color}}/>{item.label}</span>)}</div></div>
+    </>}
+    <SearchingContributorTable enabled={true} />
+  </section>;
 };

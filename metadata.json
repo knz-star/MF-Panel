@@ -1,5 +1,5 @@
 {
-  "name": "MF MPanel — Central Workflow Management System",
+  "name": "MF MPanel \u2014 Central Workflow Management System",
   "description": "MF MPanel v2.14.2: Vercel frontend + Supabase backend (RPC + RLS). Single Admin-assigned team per user, count-only Searching intake, automatic Checking handoff, admin review routing.",
   "requestFramePermissions": []
 }

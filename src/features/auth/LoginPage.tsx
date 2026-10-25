@@ -14,7 +14,7 @@ export const LoginPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [needsConfirmation, setNeedsConfirmation] = useState(false);
   const [resendMessage, setResendMessage] = useState('');
-  const { loginWithEmail, loginWithGoogle, resendConfirmation } = useAuth();
+  const { loginWithEmail, resendConfirmation } = useAuth();
   const { assets: siteAssets } = useLandingAssets();
   const siteBanner = siteAssets.find((asset) => asset.assetType === 'banner')?.imageUrl || 'https://i.postimg.cc/P5hbxNy7/20261015-112236.jpg';
   const navigate = useNavigate();
@@ -44,19 +44,7 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const handleGoogle = async () => {
-    setError(null);
-    setDiagnosticError(null);
-    setIsSubmitting(true);
-    try {
-      await loginWithGoogle();
-    } catch (err) {
-      setDiagnosticError(err);
-      setError(friendlyError(err));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+
 
   return (
     <div className="flex min-h-screen flex-col justify-center bg-gradient-to-b from-[#eef3ff] via-[#f5f5f7] to-white px-4 py-8 sm:px-6">
@@ -78,8 +66,6 @@ export const LoginPage: React.FC = () => {
           <div className="flex justify-end"><Link to="/forgot-password" className="text-xs font-medium text-blue-700 hover:underline">Forgot password?</Link></div>
           <button type="submit" disabled={isSubmitting} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-60">{isSubmitting ? 'Signing in…' : 'Sign in'}<ArrowRight className="h-4 w-4" /></button>
         </form>
-        <div className="my-4 flex items-center gap-3"><span className="h-px flex-1 bg-slate-200" /><span className="text-xs text-slate-400">OR</span><span className="h-px flex-1 bg-slate-200" /></div>
-        <button onClick={() => void handleGoogle()} disabled={isSubmitting} className="min-h-11 w-full rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60">Continue with Google</button>
         <p className="mt-6 text-center text-sm text-slate-500">New to MF MPanel? <Link to="/signup" className="font-semibold text-blue-700 hover:underline">Create account</Link></p>
       </div>
     </div>

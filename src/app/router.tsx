@@ -52,12 +52,17 @@ import { AdminTeamAnalyticsPage } from '../features/admin/AdminTeamAnalyticsPage
 import { AdminWorkflowControlPage } from '../features/admin/AdminWorkflowControlPage';
 import { AdminSystemHealthPage } from '../features/admin/AdminSystemHealthPage';
 import { GlobalTrackerPage } from '../features/admin/GlobalTrackerPage';
+import { PublicGlobalTrackerPage } from '../features/landing/PublicGlobalTrackerPage';
 
 export const router = createBrowserRouter([
   // Public Landing & Auth Routes
   {
     path: '/',
     element: <LandingPage />,
+  },
+  {
+    path: '/track',
+    element: <PublicGlobalTrackerPage />,
   },
   {
     path: '/login',

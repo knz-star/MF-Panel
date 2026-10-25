@@ -11,7 +11,7 @@ interface AuthContextType {
   connectionStatus: BackendConnectionStatus; profileLoadError: { code: string; message: string } | null;
   loginWithEmail: (email: string, pass: string) => Promise<void>;
   signupWithEmail: (name: string, email: string, pass: string, gender: 'male' | 'female') => Promise<void>;
-  loginWithGoogle: () => Promise<void>; logout: () => Promise<void>;
+  logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>; updatePassword: (password: string) => Promise<void>; resendConfirmation: (email: string) => Promise<void>; hasModuleAccess: (module: ModuleKey) => boolean; refreshProfile: () => Promise<void>;
 }
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -85,7 +85,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     void checkSupabaseConnection().then(setConnectionStatus);
     void supabase.auth.getSession().then(({ data }) => { const user = mapUser(data.session?.user); if (user) void Promise.resolve().then(() => hydrateUser(user)); else setIsLoading(false); });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') { try { window.sessionStorage.setItem('mfp-password-recovery-at', String(Date.now())); } catch { /* Recovery can continue without session storage if the URL still carries its token. */ } }
       const user = mapUser(session?.user);
       if (!user) { hydrationPromises.current.clear(); profileHydratedAt.current.clear(); hydratedProfiles.current.clear(); try { for (let i = window.sessionStorage.length - 1; i >= 0; i--) { const key = window.sessionStorage.key(i); if (key?.startsWith('mfp-profile-hydration:')) window.sessionStorage.removeItem(key); } } catch { /* Ignore unavailable storage. */ } setCurrentUser(null); setUserProfile(null); setProfileLoadError(null); setIsLoading(false); return; }
       void Promise.resolve().then(() => hydrateUser(user));
@@ -108,14 +109,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const user = mapUser(data.user); if (user) await hydrateUser(user);
     } finally { setIsLoading(false); }
   };
-  const loginWithGoogle = async () => { const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } }); if (error) throw error; };
   const logout = async () => { const { error } = await supabase.auth.signOut(); if (error) throw error; localStore.clearAll(); setCurrentUser(null); setUserProfile(null); };
   const resetPassword = async (email: string) => { const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), { redirectTo: `${window.location.origin}/reset-password` }); if (error) throw error; };
-  const updatePassword = async (password: string) => { const { error } = await supabase.auth.updateUser({ password }); if (error) throw error; };
+  const updatePassword = async (password: string) => { const { error } = await supabase.auth.updateUser({ password }); if (error) throw error; try { window.sessionStorage.removeItem('mfp-password-recovery-at'); } catch { /* Ignore unavailable session storage. */ } };
   const resendConfirmation = async (email: string) => { const { error } = await supabase.auth.resend({ type: 'signup', email: email.trim().toLowerCase(), options: { emailRedirectTo: `${window.location.origin}/login` } }); if (error) throw error; };
   const isAdmin = !!currentUser && userProfile?.role === 'ADMIN' && userProfile.accountStatus === 'ACTIVE';
   const isTeamAdmin = !!currentUser && userProfile?.role === 'TEAM_ADMIN' && userProfile.accountStatus === 'ACTIVE';
   const hasModuleAccess = (module: ModuleKey): boolean => { if (!currentUser || !userProfile || userProfile.accountStatus !== 'ACTIVE') return false; if (isAdmin) return true; if (module === 'admin') return false; const teamModules: TeamKey[] = ['searching','checking','reports','evidence']; if (teamModules.includes(module as TeamKey)) return userProfile.team === module && userProfile.allowedModules?.includes(module) === true; return userProfile.accountStatus === 'ACTIVE' && userProfile.allowedModules?.includes(module) === true; };
-  return <AuthContext.Provider value={{ currentUser, userProfile, isLoading, isAdmin, isTeamAdmin, connectionStatus, profileLoadError, loginWithEmail, signupWithEmail, loginWithGoogle, logout, resetPassword, updatePassword, resendConfirmation, hasModuleAccess, refreshProfile }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ currentUser, userProfile, isLoading, isAdmin, isTeamAdmin, connectionStatus, profileLoadError, loginWithEmail, signupWithEmail, logout, resetPassword, updatePassword, resendConfirmation, hasModuleAccess, refreshProfile }}>{children}</AuthContext.Provider>;
 };
 export function useAuth() { const value = useContext(AuthContext); if (!value) throw new Error('useAuth must be used within AuthProvider'); return value; }

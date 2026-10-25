@@ -32,6 +32,7 @@ import { listAuditLogs } from '../../services/workflowService';
 import { UserProfile } from '../../types/user';
 import { AdminTeamWorkPanel } from './AdminTeamWorkPanel';
 import { ProfileRecord } from '../../types/profile';
+import { getDashboardMetrics, type DashboardMetrics } from '../../services/dashboardMetricsService';
 
 export const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -45,6 +46,7 @@ export const AdminDashboard: React.FC = () => {
     totalJobs: 0,
   });
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [profiles, setProfiles] = useState<ProfileRecord[]>([]);
 
   // Global search state
@@ -54,24 +56,26 @@ export const AdminDashboard: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [allProfiles, allPosts, usersList, jobsList] = await Promise.all([
+      const [allProfiles, allPosts, usersList, jobsList, dashboardMetrics] = await Promise.all([
         listProfiles({ limitCount: 500 }),
         listAllPosts(500),
         listAllUsers(100),
         listReportJobs(100),
+        getDashboardMetrics(7),
       ]);
+      setMetrics(dashboardMetrics);
 
       const pending = allProfiles.filter((p) => p.currentWorkflowStatus === 'QUEUED_CHECKING').length;
       const verified = allProfiles.filter((p) => p.currentWorkflowStatus === 'VERIFIED').length;
       const failed = allProfiles.filter((p) => p.currentWorkflowStatus === 'FAILED_BLOCKED').length;
 
       setStats({
-        totalProfiles: allProfiles.length,
-        totalPosts: allPosts.length,
+        totalProfiles: dashboardMetrics.totals.profiles,
+        totalPosts: dashboardMetrics.totals.posts,
         pendingChecking: pending,
         verifiedRecords: verified,
         failedBlocked: failed,
-        totalUsers: usersList.length,
+        totalUsers: dashboardMetrics.totals.activeUsers,
         totalJobs: jobsList.length,
       });
 
@@ -138,7 +142,7 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Statistics Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
         <div className="p-4 bg-white/90 rounded-[22px] border border-white shadow-sm">
           <span className="text-[10px] text-slate-400 block uppercase font-medium">Profiles</span>
           <span className="text-xl font-bold font-mono text-slate-950 tabular-nums">
@@ -181,6 +185,15 @@ export const AdminDashboard: React.FC = () => {
             {loading ? '—' : stats.totalJobs}
           </span>
         </div>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 -mt-5">
+        <div className="p-4 bg-white/90 rounded-[22px] border border-white shadow-sm"><span className="text-[10px] text-slate-400 block uppercase font-medium">Links collected today</span><span className="text-xl font-bold font-mono text-emerald-700 tabular-nums">{loading ? '—' : (metrics?.daily.find(d => d.date === new Date().toISOString().slice(0,10))?.searchingTotal ?? 0).toLocaleString()}</span></div>
+        <div className="p-4 bg-white/90 rounded-[22px] border border-white shadow-sm"><span className="text-[10px] text-slate-400 block uppercase font-medium">Links collected · 7 days</span><span className="text-xl font-bold font-mono text-emerald-700 tabular-nums">{loading ? '—' : (metrics?.daily.reduce((n,d) => n+d.searchingTotal,0) ?? 0).toLocaleString()}</span></div>
+        <div className="p-4 bg-white/90 rounded-[22px] border border-white shadow-sm"><span className="text-[10px] text-slate-400 block uppercase font-medium">Links checked · all time</span><span className="text-xl font-bold font-mono text-blue-700 tabular-nums">{loading ? '—' : (metrics?.totals.checkingChecked ?? 0).toLocaleString()}</span></div>
+        <div className="p-4 bg-white/90 rounded-[22px] border border-white shadow-sm"><span className="text-[10px] text-slate-400 block uppercase font-medium">Evidence links assigned</span><span className="text-xl font-bold font-mono text-indigo-700 tabular-nums">{loading ? '—' : (metrics?.totals.evidenceAssigned ?? 0).toLocaleString()}</span></div>
+        <div className="p-4 bg-white/90 rounded-[22px] border border-white shadow-sm"><span className="text-[10px] text-slate-400 block uppercase font-medium">Evidence ZIP links analyzed</span><span className="text-xl font-bold font-mono text-purple-700 tabular-nums">{loading ? '—' : (metrics?.totals.evidenceCompleted ?? 0).toLocaleString()}</span></div>
+        <div className="p-4 bg-white/90 rounded-[22px] border border-white shadow-sm"><span className="text-[10px] text-slate-400 block uppercase font-medium">Reports</span><span className="text-sm font-bold text-slate-700">Counted with Evidence ZIP analysis</span></div>
       </div>
 
       {/* Team Work by gender group + period */}

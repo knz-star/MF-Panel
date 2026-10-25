@@ -20,14 +20,43 @@ export const ResetPasswordPage: React.FC = () => {
 
   useEffect(() => {
     let alive = true;
-    // Supabase reports expired/used links in the URL hash or query (error_code=otp_expired).
-    const params = new URLSearchParams(`${window.location.hash.replace(/^#/, '')}&${window.location.search.replace(/^\?/, '')}`);
-    if (params.get('error') || params.get('error_code')) { setLinkState('expired'); return; }
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => { if (alive && (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN')) setLinkState('ready'); });
-    const timer = window.setTimeout(async () => {
-      const { data } = await supabase.auth.getSession();
-      if (alive) setLinkState(data.session ? 'ready' : 'expired');
-    }, 1500);
+    let resolved = false;
+    const query = new URLSearchParams(window.location.search);
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const urlError = query.get('error_description') || hash.get('error_description') || query.get('error') || hash.get('error') || query.get('error_code') || hash.get('error_code');
+    let recoveryMarkerAt = 0;
+    try { recoveryMarkerAt = Number(window.sessionStorage.getItem('mfp-password-recovery-at') || 0); } catch { /* Ignore unavailable session storage. */ }
+    const recoveryMarkerValid = recoveryMarkerAt > 0 && Date.now() - recoveryMarkerAt < 10 * 60 * 1000;
+    const recoveryIntent = recoveryMarkerValid || query.get('type') === 'recovery' || hash.get('type') === 'recovery' || query.has('code') || (hash.has('access_token') && hash.get('type') === 'recovery');
+
+    if (urlError) {
+      setLinkState('expired');
+      return () => { alive = false; };
+    }
+    if (!recoveryIntent) {
+      setLinkState('expired');
+      return () => { alive = false; };
+    }
+
+    const markReady = () => {
+      if (!alive || resolved) return;
+      resolved = true;
+      setLinkState('ready');
+    };
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && !!session)) markReady();
+    });
+
+    // PKCE links may need a moment to exchange the code for a session. Check the
+    // current session as well as listening for the auth callback to avoid races.
+    void supabase.auth.getSession().then(({ data, error: sessionError }) => {
+      if (!alive || resolved) return;
+      if (!sessionError && data.session && recoveryIntent) markReady();
+    }).catch(() => { /* The timeout below displays the safe expired-link state. */ });
+
+    const timer = window.setTimeout(() => {
+      if (alive && !resolved) setLinkState('expired');
+    }, 8000);
     return () => { alive = false; window.clearTimeout(timer); subscription.unsubscribe(); };
   }, []);
 
