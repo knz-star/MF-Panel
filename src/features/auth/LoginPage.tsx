@@ -6,7 +6,9 @@ import { useLandingAssets } from '../landing/useLandingData';
 import { authErrorMessage } from '../../utils/authErrors';
 
 export const LoginPage: React.FC = () => {
-  const [email, setEmail] = useState('');
+  const location = useLocation();
+  const routeState = location.state as { from?: { pathname?: string }; email?: string; notice?: string } | null;
+  const [email, setEmail] = useState(routeState?.email ?? '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -16,8 +18,7 @@ export const LoginPage: React.FC = () => {
   const { assets: siteAssets } = useLandingAssets();
   const siteBanner = siteAssets.find((asset) => asset.assetType === 'banner')?.imageUrl || 'https://i.postimg.cc/P5hbxNy7/20261015-112236.jpg';
   const navigate = useNavigate();
-  const location = useLocation();
-  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/dashboard';
+  const from = routeState?.from?.pathname || '/dashboard';
 
   const friendlyError = (err: unknown) => authErrorMessage(err, 'login');
 
@@ -51,6 +52,7 @@ export const LoginPage: React.FC = () => {
       </div>
       <div className="mx-auto mt-8 w-full max-w-md rounded-[28px] border border-white/80 bg-white/90 p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.25)] backdrop-blur-xl sm:p-8">
         <div className="mb-5 flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 p-3"><Shield className="mt-0.5 h-4 w-4 shrink-0 text-blue-700" /><p className="text-xs leading-relaxed text-slate-600">Admin permissions are verified server-side through the protected Supabase profile and RLS. There is no one-click or simulated admin login.</p></div>
+        {routeState?.notice && <div role="status" className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">{routeState.notice}</div>}
         {error && <div role="alert" className="mb-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /><span className="break-words">{error}</span></div>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <label className="block text-sm font-medium text-slate-700">Email address<div className="relative mt-1.5"><Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-xl border border-slate-200 py-3 pl-10 pr-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10" placeholder="you@example.com" /></div></label>

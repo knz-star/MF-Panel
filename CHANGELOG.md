@@ -1,9 +1,9 @@
+## v2.16.6 — Signup redirect and Searching post intake
+- Existing signup email now redirects to Sign in and pre-fills the email instead of leaving the user on the signup form.
+- Added the production-applied SQL migration that allows authenticated Searching users to insert their own initial post-intake records while preserving Checking/Admin write restrictions.
+- Production SQL migration applied; full frontend build/lint not verified because dependency installation timed out.
+
 # Changelog
-
-## v2.16.5 — WhatsApp Support fix
-- WhatsApp Support contacts are now read from the same team+gender settings store the admin panel saves to (mfp_team_gender_settings_api), scoped per team AND gender group; member dashboards pass their own team + gender, so the saved number actually appears as the Support button.
-- Gender Team Dashboard support card updated to the same API with a team selector (Spark fix on top of the builder package: the card previously called the old per-gender signature and the old settings-doc save path, which the new reader no longer reads).
-
 
 ## v2.16.4 — 2026-10-25
 - Simplified Searching intake to one focused paste box with live profile/post/unknown detection preview.

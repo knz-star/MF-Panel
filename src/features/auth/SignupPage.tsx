@@ -39,8 +39,9 @@ export const SignupPage: React.FC = () => {
       navigate('/pledge', { replace: true });
     } catch (err) {
       if ((err instanceof Error && err.message.startsWith('Signup submitted.')) || (err as { code?: string })?.code === 'signup_existing_or_pending') {
-        setSuccess(NEUTRAL);
-        setError(null);
+        // Existing auth accounts should continue through sign-in instead of staying on signup.
+        navigate('/login', { replace: true, state: { email: email.trim().toLowerCase(), notice: NEUTRAL } });
+        return;
       } else {
         setDiagnosticError(err);
         setError(friendlyError(err));
