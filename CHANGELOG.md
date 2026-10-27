@@ -1,3 +1,8 @@
+## v2.16.8 — Checking queue and link actions
+- Maintain up to 10 valid active links per checker; top up after terminal decisions request the next item.
+- Skip assignments whose source record or URL is missing; use URL field fallbacks.
+- Add clipboard fallback and missing-URL guard; infer common platform labels from URL.
+
 ## v2.16.6 — Signup redirect and Searching post intake
 - Existing signup email now redirects to Sign in and pre-fills the email instead of leaving the user on the signup form.
 - Added the production-applied SQL migration that allows authenticated Searching users to insert their own initial post-intake records while preserving Checking/Admin write restrictions.
